@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(curl -s -X POST http://localhost:3000/test/mensaje -H \"Content-Type: application/json\" -d '{\"\"\"\"telefono\"\"\"\": \"\"\"\"+5491144390930\"\"\"\", \"\"\"\"mensaje\"\"\"\": \"\"\"\"Sí, reservalo\"\"\"\"}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''PACIENTE:'''', json.dumps\\(d[''''paciente''''], indent=2\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''RESPUESTA:'''', d[''''respuesta'''']\\); print\\(''''PACIENTE:'''', d[''''paciente''''][''''apellido'''']\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''RESPUESTA:'''', d[''''respuesta'''']\\); print\\(''''CREADO:'''', d[''''paciente_creado'''']\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''RESPUESTA:'''', d[''''respuesta'''']\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d[''''respuesta'''']\\)\")",
+      "Bash(curl -s -X POST http://localhost:3000/test/reset -H \"Content-Type: application/json\" -d '{\"\"\"\"telefono\"\"\"\": \"\"\"\"+5491199999001\"\"\"\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/test/mensaje -H \"Content-Type: application/json\" -d '{\"\"\"\"telefono\"\"\"\": \"\"\"\"+5491199999001\"\"\"\", \"\"\"\"mensaje\"\"\"\": \"\"\"\"Hola quiero limpieza dental mañana a las 11\"\"\"\"}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''CREADO:'''', d[''''paciente_creado'''']\\); print\\(d[''''respuesta'''']\\)\")",
+      "Bash(python3 -c \"import sys,json; print\\(json.load\\(sys.stdin\\)[''''respuesta'''']\\)\")",
+      "Bash(for MSG in \"Hola quiero limpieza dental mañana a las 9\" \"Pedro\" \"Sánchez\" \"OSDE\")",
+      "Bash(do echo:*)",
+      "Bash(python3 -c \":*)"
+    ]
+  }
+}
