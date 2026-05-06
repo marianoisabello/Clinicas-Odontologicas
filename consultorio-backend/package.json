@@ -2,6 +2,9 @@
   "name": "consultorio-backend",
   "version": "1.0.0",
   "description": "Back-end y agente de IA para WhatsApp del consultorio odontológico",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "type": "module",
   "main": "src/index.js",
   "scripts": {

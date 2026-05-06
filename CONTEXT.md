@@ -134,12 +134,12 @@ POST `/test/reset` con `{telefono}` para borrar conversación y empezar de cero.
 
 ## Próximos pasos pendientes
 
-1. Resolver bug de registro de datos parciales del agente
-2. Test end-to-end completo (paciente nuevo saca turno real)
-3. Verificar frontend funcionando: `npm install` y `npm run dev`
-4. Calendario interactivo en el panel (react-big-calendar o @fullcalendar/react)
+~~1. Resolver bug de registro de datos parciales del agente~~ ✅
+~~2. Test end-to-end completo (paciente nuevo saca turno real)~~ ✅
+~~3. Verificar frontend funcionando: `npm install` y `npm run dev`~~ ✅ (TypeScript sin errores, dependencias OK)
+~~4. Calendario interactivo en el panel~~ ✅ (reescrito con posicionamiento absoluto: turnos ocupan altura proporcional a su duración, click con snap a 15 min, sin librerías externas)
 5. Suscripción realtime de Supabase en /whatsapp del panel
-6. Conectar Twilio sandbox y probar con WhatsApp real
+6. Conectar Twilio sandbox y probar con WhatsApp real (en progreso: .env actualizado, usar `npx localtunnel --port 3000` como alternativa a ngrok, webhook URL: `https://<tunnel>.loca.lt/webhook/whatsapp`)
 7. Deploy del back-end a Render o Railway
 8. Job cron de recordatorios 24hs antes
 9. WhatsApp Business API aprobada (requiere aprobación de Meta)

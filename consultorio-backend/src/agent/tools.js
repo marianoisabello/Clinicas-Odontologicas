@@ -83,7 +83,7 @@ export const tools = [
   {
     name: 'registrar_datos_paciente',
     description:
-      'Guarda o actualiza datos del paciente cuando el primer contacto y todavía no está registrado, o cuando provee datos faltantes.',
+      'Guarda o actualiza datos del paciente. Llamar INMEDIATAMENTE cada vez que el paciente proporcione cualquier dato (nombre, apellido, obra social, DNI, email), sin esperar a tener todos juntos. Cada llamada puede ser parcial — solo incluir los campos recibidos en ese mensaje.',
     input_schema: {
       type: 'object',
       properties: {

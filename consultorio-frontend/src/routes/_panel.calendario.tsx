@@ -27,7 +27,11 @@ export const Route = createFileRoute("/_panel/calendario")({
   component: CalendarioPage,
 });
 
-const HORAS = Array.from({ length: 12 }, (_, i) => i + 9); // 9 a 20
+const START_HOUR = 9;
+const END_HOUR = 21;        // exclusive — muestra hasta las 20:xx
+const HOUR_PX = 64;         // px por hora
+const TOTAL_PX = (END_HOUR - START_HOUR) * HOUR_PX;
+const HORAS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR);
 
 interface Turno {
   id: string; paciente_id: string; profesional_id: string | null;
@@ -35,6 +39,21 @@ interface Turno {
   tratamiento: string | null; estado: string; notas: string | null;
   pacientes?: { nombre: string; apellido: string } | { nombre: string; apellido: string }[] | null;
   profesionales?: { nombre: string; color_calendario?: string } | null;
+}
+
+function turnoLayout(turno: Turno): { top: number; height: number } {
+  const start = new Date(turno.fecha_hora_inicio);
+  const end = new Date(turno.fecha_hora_fin);
+  const startMin = start.getHours() * 60 + start.getMinutes();
+  const endMin = end.getHours() * 60 + end.getMinutes();
+  const top = ((startMin - START_HOUR * 60) / 60) * HOUR_PX;
+  const height = Math.max(((endMin - startMin) / 60) * HOUR_PX, 22);
+  return { top, height };
+}
+
+function getOne<T>(v: T | T[] | null | undefined): T | null {
+  if (!v) return null;
+  return Array.isArray(v) ? (v[0] ?? null) : v;
 }
 
 function CalendarioPage() {
@@ -77,13 +96,15 @@ function CalendarioPage() {
     },
   });
 
-  const filtered = profFilter.length === 0 ? turnos : turnos.filter((t) => t.profesional_id && profFilter.includes(t.profesional_id));
+  const filtered = profFilter.length === 0 ? turnos : turnos.filter(
+    (t) => t.profesional_id && profFilter.includes(t.profesional_id),
+  );
 
   const save = useMutation({
     mutationFn: async () => {
       const inicio = new Date(form.fecha_hora_inicio);
       const fin = new Date(inicio.getTime() + form.duracion_min * 60000);
-      const payload = {
+      const { error } = await supabase.from("turnos").insert({
         paciente_id: form.paciente_id,
         profesional_id: form.profesional_id || null,
         fecha_hora_inicio: inicio.toISOString(),
@@ -91,8 +112,7 @@ function CalendarioPage() {
         tratamiento: form.tratamiento || null,
         notas: form.notas || null,
         origen: "manual" as const,
-      };
-      const { error } = await supabase.from("turnos").insert(payload);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -129,15 +149,27 @@ function CalendarioPage() {
 
   const openCreate = (date: Date) => {
     setCreating(date);
-    const local = format(date, "yyyy-MM-dd'T'HH:mm");
-    setForm({ paciente_id: "", profesional_id: "", fecha_hora_inicio: local, duracion_min: 45, tratamiento: "", notas: "" });
+    setForm({
+      paciente_id: "", profesional_id: "",
+      fecha_hora_inicio: format(date, "yyyy-MM-dd'T'HH:mm"),
+      duracion_min: 45, tratamiento: "", notas: "",
+    });
   };
 
-  const getOne = <T,>(v: T | T[] | null | undefined): T | null =>
-    !v ? null : Array.isArray(v) ? v[0] ?? null : v;
+  // Click en una celda vacía: calcular hora a partir del offset Y
+  const handleDayClick = (day: Date, e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const totalMinutes = START_HOUR * 60 + Math.floor((y / HOUR_PX) * 60);
+    const snapped = Math.round(totalMinutes / 15) * 15; // snap a 15 min
+    const h = Math.min(Math.floor(snapped / 60), END_HOUR - 1);
+    const m = snapped % 60;
+    openCreate(setMinutes(setHours(day, h), m));
+  };
 
   return (
     <div className="space-y-4">
+      {/* Encabezado */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Calendario</h1>
         <div className="flex items-center gap-2">
@@ -147,39 +179,107 @@ function CalendarioPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {profs.map((p) => {
-          const active = profFilter.includes(p.id);
-          return (
-            <Badge
-              key={p.id}
-              variant={active ? "default" : "outline"}
-              className="cursor-pointer"
-              style={active ? { backgroundColor: p.color_calendario ?? undefined } : undefined}
-              onClick={() => setProfFilter(active ? profFilter.filter((x) => x !== p.id) : [...profFilter, p.id])}
-            >
-              {p.nombre}
-            </Badge>
-          );
-        })}
-      </div>
+      {/* Filtro profesionales */}
+      {profs.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {profs.map((p) => {
+            const active = profFilter.includes(p.id);
+            return (
+              <Badge
+                key={p.id}
+                variant={active ? "default" : "outline"}
+                className="cursor-pointer"
+                style={active ? { backgroundColor: p.color_calendario ?? undefined } : undefined}
+                onClick={() => setProfFilter(active ? profFilter.filter((x) => x !== p.id) : [...profFilter, p.id])}
+              >
+                {p.nombre}
+              </Badge>
+            );
+          })}
+        </div>
+      )}
 
-      <Card className="overflow-x-auto p-2">
-        <div className="grid min-w-[900px] grid-cols-[60px_repeat(6,minmax(0,1fr))]">
-          <div />
-          {dias.map((d) => (
-            <div key={d.toISOString()} className={`p-2 text-center text-sm font-medium ${isToday(d) ? "text-primary" : ""}`}>
-              <div className="capitalize">{format(d, "EEE", { locale: es })}</div>
-              <div className="text-xl font-bold">{format(d, "d")}</div>
+      {/* Grilla */}
+      <Card className="overflow-auto p-0">
+        <div className="min-w-[800px]">
+          {/* Cabecera días */}
+          <div className="grid grid-cols-[56px_repeat(6,minmax(0,1fr))] border-b bg-background sticky top-0 z-10">
+            <div />
+            {dias.map((d) => (
+              <div
+                key={d.toISOString()}
+                className={`py-2 text-center text-sm font-medium border-l ${isToday(d) ? "text-primary" : "text-muted-foreground"}`}
+              >
+                <div className="capitalize text-xs">{format(d, "EEE", { locale: es })}</div>
+                <div className={`text-xl font-bold ${isToday(d) ? "bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center mx-auto" : ""}`}>
+                  {format(d, "d")}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Cuerpo: etiquetas de hora + columnas de días */}
+          <div className="grid grid-cols-[56px_repeat(6,minmax(0,1fr))]">
+            {/* Columna de horas */}
+            <div className="relative" style={{ height: TOTAL_PX }}>
+              {HORAS.map((h) => (
+                <div
+                  key={h}
+                  className="absolute right-2 text-[11px] text-muted-foreground leading-none"
+                  style={{ top: (h - START_HOUR) * HOUR_PX - 6 }}
+                >
+                  {String(h).padStart(2, "0")}:00
+                </div>
+              ))}
             </div>
-          ))}
-          {HORAS.map((h) => (
-            <Row key={h} hora={h} dias={dias} turnos={filtered} onClickEmpty={openCreate} onClickTurno={(t) => setEditing(t)} getOne={getOne} />
-          ))}
+
+            {/* Columnas de días */}
+            {dias.map((day) => {
+              const dayTurnos = filtered.filter((t) => isSameDay(new Date(t.fecha_hora_inicio), day));
+              return (
+                <div
+                  key={day.toISOString()}
+                  className="relative border-l cursor-pointer"
+                  style={{ height: TOTAL_PX }}
+                  onClick={(e) => handleDayClick(day, e)}
+                >
+                  {/* Líneas horizontales por hora */}
+                  {HORAS.map((h) => (
+                    <div
+                      key={h}
+                      className="absolute left-0 right-0 border-t border-border/40"
+                      style={{ top: (h - START_HOUR) * HOUR_PX }}
+                    />
+                  ))}
+
+                  {/* Turnos */}
+                  {dayTurnos.map((t) => {
+                    const { top, height } = turnoLayout(t);
+                    const p = getOne(t.pacientes as { nombre: string; apellido: string }[] | { nombre: string; apellido: string } | null);
+                    const color = t.profesionales?.color_calendario ?? "#0F4C5C";
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={(e) => { e.stopPropagation(); setEditing(t); }}
+                        className="absolute left-0.5 right-0.5 rounded text-left text-white overflow-hidden px-1.5 py-0.5 text-xs hover:brightness-90 transition-all"
+                        style={{ top, height, backgroundColor: color }}
+                      >
+                        <div className="font-semibold leading-tight">{fmtTime(t.fecha_hora_inicio)}</div>
+                        <div className="truncate leading-tight">{p ? `${p.apellido}, ${p.nombre}` : "—"}</div>
+                        {height >= 50 && t.tratamiento && (
+                          <div className="truncate text-[10px] opacity-80">{t.tratamiento}</div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </Card>
 
-      {/* CREATE */}
+      {/* Dialog: crear turno */}
       <Dialog open={!!creating} onOpenChange={(o) => !o && setCreating(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nuevo turno</DialogTitle></DialogHeader>
@@ -189,7 +289,9 @@ function CalendarioPage() {
               <Select value={form.paciente_id} onValueChange={(v) => setForm({ ...form, paciente_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
-                  {pacientes.map((p) => <SelectItem key={p.id} value={p.id}>{p.apellido}, {p.nombre}</SelectItem>)}
+                  {pacientes.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.apellido}, {p.nombre}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -205,15 +307,32 @@ function CalendarioPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Inicio</Label>
-                <Input type="datetime-local" value={form.fecha_hora_inicio} onChange={(e) => setForm({ ...form, fecha_hora_inicio: e.target.value })} required />
+                <Input
+                  type="datetime-local"
+                  value={form.fecha_hora_inicio}
+                  onChange={(e) => setForm({ ...form, fecha_hora_inicio: e.target.value })}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label>Duración (min)</Label>
-                <Input type="number" value={form.duracion_min} onChange={(e) => setForm({ ...form, duracion_min: parseInt(e.target.value) || 45 })} />
+                <Input
+                  type="number"
+                  min={15}
+                  step={15}
+                  value={form.duracion_min}
+                  onChange={(e) => setForm({ ...form, duracion_min: parseInt(e.target.value) || 45 })}
+                />
               </div>
             </div>
-            <div className="space-y-2"><Label>Tratamiento</Label><Input value={form.tratamiento} onChange={(e) => setForm({ ...form, tratamiento: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Notas</Label><Textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label>Tratamiento</Label>
+              <Input value={form.tratamiento} onChange={(e) => setForm({ ...form, tratamiento: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Notas</Label>
+              <Textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} />
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreating(null)}>Cancelar</Button>
               <Button type="submit" disabled={!form.paciente_id || save.isPending}>Guardar</Button>
@@ -222,7 +341,7 @@ function CalendarioPage() {
         </DialogContent>
       </Dialog>
 
-      {/* EDIT */}
+      {/* Dialog: editar / eliminar turno */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Turno</DialogTitle></DialogHeader>
@@ -232,12 +351,20 @@ function CalendarioPage() {
               <div className="space-y-4">
                 <div>
                   <p className="font-medium">{p ? `${p.apellido}, ${p.nombre}` : "—"}</p>
-                  <p className="text-sm text-muted-foreground">{format(new Date(editing.fecha_hora_inicio), "PPP HH:mm 'hs'", { locale: es })}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(editing.fecha_hora_inicio), "PPP HH:mm", { locale: es })} hs
+                    {" → "}
+                    {fmtTime(editing.fecha_hora_fin)} hs
+                  </p>
                   {editing.tratamiento && <p className="mt-1 text-sm">{editing.tratamiento}</p>}
+                  {editing.notas && <p className="text-sm text-muted-foreground">{editing.notas}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Estado</Label>
-                  <Select value={editing.estado} onValueChange={(v) => updateEstado.mutate({ id: editing.id, estado: v })}>
+                  <Select
+                    value={editing.estado}
+                    onValueChange={(v) => updateEstado.mutate({ id: editing.id, estado: v })}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pendiente">Pendiente</SelectItem>
@@ -249,7 +376,10 @@ function CalendarioPage() {
                   </Select>
                 </div>
                 <DialogFooter>
-                  <Button variant="destructive" onClick={() => { if (confirm("¿Eliminar?")) remove.mutate(editing.id); }}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => { if (confirm("¿Eliminar este turno?")) remove.mutate(editing.id); }}
+                  >
                     <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                   </Button>
                 </DialogFooter>
@@ -259,53 +389,5 @@ function CalendarioPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function Row({
-  hora, dias, turnos, onClickEmpty, onClickTurno, getOne,
-}: {
-  hora: number;
-  dias: Date[];
-  turnos: Turno[];
-  onClickEmpty: (d: Date) => void;
-  onClickTurno: (t: Turno) => void;
-  getOne: <T,>(v: T | T[] | null | undefined) => T | null;
-}) {
-  return (
-    <>
-      <div className="border-t border-r p-2 text-xs text-muted-foreground">{String(hora).padStart(2, "0")}:00</div>
-      {dias.map((d) => {
-        const slot = setMinutes(setHours(d, hora), 0);
-        const slotTurnos = turnos.filter((t) => {
-          const ti = new Date(t.fecha_hora_inicio);
-          return isSameDay(ti, d) && ti.getHours() === hora;
-        });
-        return (
-          <div
-            key={d.toISOString()}
-            className="relative min-h-[60px] border-t border-r p-1 hover:bg-muted/30 cursor-pointer"
-            onClick={() => slotTurnos.length === 0 && onClickEmpty(slot)}
-          >
-            {slotTurnos.map((t) => {
-              const p = getOne(t.pacientes as { nombre: string; apellido: string }[] | { nombre: string; apellido: string } | null);
-              const color = t.profesionales?.color_calendario || "#0F4C5C";
-              return (
-                <button
-                  key={t.id}
-                  onClick={(e) => { e.stopPropagation(); onClickTurno(t); }}
-                  className="mb-1 block w-full rounded px-1.5 py-1 text-left text-xs text-white"
-                  style={{ backgroundColor: color }}
-                >
-                  <div className="font-semibold">{fmtTime(t.fecha_hora_inicio)}</div>
-                  <div className="truncate">{p ? `${p.apellido}` : "—"}</div>
-                  {t.tratamiento && <div className="truncate text-[10px] opacity-80">{t.tratamiento}</div>}
-                </button>
-              );
-            })}
-          </div>
-        );
-      })}
-    </>
   );
 }
