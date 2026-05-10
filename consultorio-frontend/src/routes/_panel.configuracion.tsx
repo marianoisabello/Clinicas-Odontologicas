@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,12 +15,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_panel/configuracion")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    google: (search.google as string) ?? undefined,
+  }),
   component: ConfigPage,
 });
 
 function ConfigPage() {
   const qc = useQueryClient();
   const [config, setConfig] = useState<Record<string, string>>({});
+  const { google: googleParam } = useSearch({ from: "/_panel/configuracion" });
+
+  // Mostrar toast según el resultado del flujo OAuth de Google
+  useEffect(() => {
+    if (googleParam === "conectado") {
+      toast.success("Google Calendar conectado correctamente");
+      qc.invalidateQueries({ queryKey: ["google-cal-creds"] });
+    } else if (googleParam === "error") {
+      toast.error("No se pudo conectar Google Calendar. Intentá de nuevo.");
+    }
+  }, [googleParam, qc]);
 
   const { data } = useQuery({
     queryKey: ["configuracion"],
@@ -60,6 +74,7 @@ function ConfigPage() {
         <TabsList>
           <TabsTrigger value="datos">Consultorio</TabsTrigger>
           <TabsTrigger value="equipo">Equipo</TabsTrigger>
+          <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
         </TabsList>
 
         <TabsContent value="datos">
@@ -87,6 +102,19 @@ function ConfigPage() {
             {profiles.map((p) => <ProfileCard key={p.id} profile={p} onUpdated={() => qc.invalidateQueries({ queryKey: ["profiles-all"] })} />)}
           </div>
         </TabsContent>
+
+        <TabsContent value="integraciones">
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Conectá el Google Calendar de cada profesional para sincronizar turnos automáticamente.
+              Los eventos del calendario también bloquean la disponibilidad para el agente de WhatsApp.
+            </p>
+            {profiles.map((p) => (
+              <GoogleCalendarCard key={p.id as string} profile={p} />
+            ))}
+          </div>
+        </TabsContent>
+
       </Tabs>
     </div>
   );
@@ -138,5 +166,99 @@ function ProfileCard({ profile, onUpdated }: { profile: Record<string, unknown>;
       </div>
       <div className="mt-4 flex justify-end"><Button onClick={() => save.mutate()}>Guardar</Button></div>
     </CardContent></Card>
+  );
+}
+
+function GoogleCalendarCard({ profile }: { profile: Record<string, unknown> }) {
+  const qc = useQueryClient();
+  const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3000";
+  const profesionalId = profile.id as string;
+
+  // Consultar si el profesional tiene Google Calendar conectado
+  const { data: gcCreds, isLoading } = useQuery({
+    queryKey: ["google-cal-creds", profesionalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("google_calendar_credentials")
+        .select("google_email, connected_at")
+        .eq("profesional_id", profesionalId)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const disconnect = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${backendUrl}/auth/google/disconnect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profesional_id: profesionalId }),
+      });
+      if (!res.ok) throw new Error("Error al desconectar");
+    },
+    onSuccess: () => {
+      toast.success("Google Calendar desconectado");
+      qc.invalidateQueries({ queryKey: ["google-cal-creds", profesionalId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handleConnect = () => {
+    window.open(`${backendUrl}/auth/google/start?profesional_id=${profesionalId}`, "_blank");
+    // Refresh optimista: si el usuario completa el flujo OAuth rápido, actualizamos el estado
+    setTimeout(() => {
+      qc.invalidateQueries({ queryKey: ["google-cal-creds", profesionalId] });
+    }, 5000);
+  };
+
+  const conectadoEn = gcCreds?.connected_at
+    ? new Date(gcCreds.connected_at).toLocaleDateString("es-AR", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+      })
+    : null;
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <p className="font-medium">{profile.nombre as string}</p>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Verificando...</p>
+            ) : gcCreds ? (
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-green-500" />
+                <p className="text-sm text-muted-foreground">
+                  Conectado como <span className="font-medium">{gcCreds.google_email}</span>
+                  {conectadoEn && ` · desde ${conectadoEn}`}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-gray-300" />
+                <p className="text-sm text-muted-foreground">No conectado</p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            {gcCreds ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => disconnect.mutate()}
+                disabled={disconnect.isPending}
+              >
+                Desconectar
+              </Button>
+            ) : (
+              <Button size="sm" onClick={handleConnect}>
+                Conectar Google Calendar
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { addMinutes, format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
+import { crearEvento, eliminarEvento, listarEventosDelDia } from './google/calendar.js';
 
 const TZ = process.env.CONSULTORIO_TZ || 'America/Argentina/Buenos_Aires';
 
@@ -84,6 +85,48 @@ export async function obtenerDisponibilidad(fecha, tratamientoId) {
     }
   }
 
+  // 5. Bloquear slots que se superponen con eventos de Google Calendar del profesional.
+  // obtenerDisponibilidad() no recibe profesionalId todavía (diseño actual es mono-profesional).
+  // Tomamos el primer profesional con Google conectado. Cuando haya selección de profesional
+  // en el flujo del agente, este paso recibirá el profesionalId directamente.
+  // Si Google falla por cualquier motivo, se usan solo los slots de Supabase (degradación elegante).
+  try {
+    const { data: gcCreds } = await supabase
+      .from('google_calendar_credentials')
+      .select('profesional_id')
+      .limit(1)
+      .single();
+
+    if (gcCreds) {
+      const eventosGoogle = await listarEventosDelDia(gcCreds.profesional_id, fecha);
+
+      if (eventosGoogle.length > 0) {
+        const slotsAntesGoogle = slots.length;
+
+        // Filtrar slots que se superponen con cualquier evento de Google Calendar
+        const slotsFiltrados = slots.filter(slot => {
+          const slotInicio = new Date(slot.inicio);
+          const slotFin = addMinutes(slotInicio, duracion);
+
+          return !eventosGoogle.some(ev => {
+            const evInicio = new Date(ev.inicio);
+            const evFin = new Date(ev.fin);
+            return slotInicio < evFin && slotFin > evInicio;
+          });
+        });
+
+        console.log(
+          `📅 Google Calendar bloqueó ${slotsAntesGoogle - slotsFiltrados.length} slots para ${fecha}`
+        );
+
+        slots.length = 0;
+        slots.push(...slotsFiltrados);
+      }
+    }
+  } catch (gcErr) {
+    console.error(`⚠️  No se pudo consultar Google Calendar para disponibilidad (${fecha}):`, gcErr.message);
+  }
+
   return { ok: true, tratamiento: tratamiento.nombre, duracion, slots };
 }
 
@@ -130,6 +173,52 @@ export async function crearTurno({ pacienteId, profesionalId, fechaHoraISO, trat
 
   if (error) return { ok: false, error: error.message };
 
+  // ── SYNC GOOGLE CALENDAR (no-crítico) ──────────────────────────────────────
+  // Si falla, el turno en Supabase sigue válido. Solo se loguea el error.
+  try {
+    // Obtener nombre del paciente para el título del evento
+    const { data: paciente } = await supabase
+      .from('pacientes')
+      .select('nombre, apellido')
+      .eq('id', pacienteId)
+      .single();
+
+    const nombrePaciente = paciente
+      ? `${paciente.nombre} ${paciente.apellido}`.trim()
+      : 'Paciente';
+
+    // Verificar si el profesional tiene Google Calendar conectado
+    const { data: gcCreds } = await supabase
+      .from('google_calendar_credentials')
+      .select('profesional_id')
+      .eq('profesional_id', profesionalId)
+      .single();
+
+    if (gcCreds) {
+      // colorId: 7 (Peacock/azul) para WhatsApp, 10 (Basil/verde) para manual/web
+      const colorId = origen === 'whatsapp' ? '7' : '10';
+
+      const googleEventId = await crearEvento(profesionalId, {
+        inicio: inicio.toISOString(),
+        fin: fin.toISOString(),
+        titulo: `Turno: ${nombrePaciente} - ${tratamiento.nombre}`,
+        descripcion: `Origen: ${origen}\nPaciente ID: ${pacienteId}\nTurno ID: ${data.id}`,
+        colorId,
+      });
+
+      // Guardar el googleEventId en el turno para poder borrarlo al cancelar
+      await supabase
+        .from('turnos')
+        .update({ google_event_id: googleEventId })
+        .eq('id', data.id);
+
+      data.google_event_id = googleEventId;
+    }
+  } catch (gcErr) {
+    console.error(`⚠️  No se pudo sincronizar turno ${data.id} con Google Calendar:`, gcErr.message);
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
   return {
     ok: true,
     turno: data,
@@ -149,11 +238,29 @@ export async function listarTurnosPaciente(pacienteId) {
 }
 
 export async function cancelarTurno(turnoId) {
+  // Leer datos del turno antes de cancelar (necesitamos google_event_id y profesional_id)
+  const { data: turno } = await supabase
+    .from('turnos')
+    .select('google_event_id, profesional_id')
+    .eq('id', turnoId)
+    .single();
+
   const { error } = await supabase
     .from('turnos')
     .update({ estado: 'cancelado' })
     .eq('id', turnoId);
 
   if (error) return { ok: false, error: error.message };
+
+  // ── SYNC GOOGLE CALENDAR (no-crítico) ──────────────────────────────────────
+  if (turno?.google_event_id && turno?.profesional_id) {
+    try {
+      await eliminarEvento(turno.profesional_id, turno.google_event_id);
+    } catch (gcErr) {
+      console.error(`⚠️  No se pudo eliminar evento de Google Calendar (turno ${turnoId}):`, gcErr.message);
+    }
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
   return { ok: true };
 }

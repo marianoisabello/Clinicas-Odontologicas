@@ -10,6 +10,7 @@ import {
 } from './services/conversaciones.js';
 import { buscarPorTelefono, crearPacientePreliminar } from './services/pacientes.js';
 import { rutaTest } from './routes/test.js';
+import { rutaGoogle } from './routes/google.js';
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
@@ -19,6 +20,9 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 
 // Ruta de testing (sin Twilio) — útil para probar el agente con curl
 app.use('/test', rutaTest);
+
+// OAuth Google Calendar
+app.use('/auth/google', rutaGoogle);
 
 /**
  * Webhook de Twilio WhatsApp.
@@ -83,4 +87,5 @@ app.listen(PORT, () => {
   console.log(`   Health:  GET  /health`);
   console.log(`   Test:    POST /test/mensaje  (sin Twilio)`);
   console.log(`   Webhook: POST /webhook/whatsapp`);
+  console.log(`   Google:  GET  /auth/google/start?profesional_id=xxx`);
 });
