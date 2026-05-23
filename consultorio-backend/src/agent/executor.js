@@ -88,8 +88,8 @@ export async function ejecutarTool(nombre, args, contexto) {
 
     case 'derivar_a_humano': {
       await supabase
-        .from('conversaciones_whatsapp')
-        .update({ estado: 'esperando_humano' })
+        .from('whatsapp_conversations')
+        .update({ estado: 'esperando_respuesta' })
         .eq('id', conversacionId);
       return { ok: true, mensaje: 'Conversación derivada al equipo del consultorio' };
     }
