@@ -45,15 +45,15 @@ export async function ejecutarTool(nombre, args, contexto) {
           error: 'El paciente no tiene datos registrados. Llamá primero a registrar_datos_paciente con nombre, apellido y obra_social.',
         };
       }
-      let profesionalId = args.profesional_id;
-      if (!profesionalId) {
+      let odontologoId = args.profesional_id || args.odontologo_id;
+      if (!odontologoId) {
         const profs = await listarProfesionales();
         if (profs.length === 0) return { ok: false, error: 'No hay profesionales disponibles' };
-        profesionalId = profs[0].id;
+        odontologoId = profs[0].id;
       }
       return await crearTurno({
         pacienteId: paciente.id,
-        profesionalId,
+        odontologoId,
         fechaHoraISO: args.fecha_hora_iso,
         tratamientoId: args.tratamiento_id,
         origen: 'whatsapp',

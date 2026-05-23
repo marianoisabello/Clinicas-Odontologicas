@@ -53,10 +53,13 @@ export async function listarTratamientos() {
 export async function listarProfesionales() {
   const { data } = await supabase
     .from('profiles')
-    .select('id, nombre')
-    .eq('rol', 'odontologo')
-    .eq('activo', true);
-  return data || [];
+    .select('id, nombre, apellido, especialidad')
+    .eq('rol', 'odontologo');
+  return (data || []).map(p => ({
+    id: p.id,
+    nombre: `${p.nombre} ${p.apellido}`.trim(),
+    especialidad: p.especialidad
+  }));
 }
 
 function normalizarTelefono(tel) {
