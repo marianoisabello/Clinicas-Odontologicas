@@ -60,7 +60,7 @@ function NosotrosPage() {
           </div>
           <div className="aspect-[4/3] overflow-hidden rounded-2xl border bg-card shadow-lg">
             <img
-              src="https://placehold.co/600x450/A8DADC/0F4C5C?text=Nuestro+Consultorio"
+              src="/images/consultorio-nosotros.jpg"
               alt="Equipo del consultorio"
               className="h-full w-full object-cover"
             />

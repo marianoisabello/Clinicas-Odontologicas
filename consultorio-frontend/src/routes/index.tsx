@@ -79,7 +79,7 @@ function HomePage() {
           <div className="relative">
             <div className="aspect-[4/3] overflow-hidden rounded-2xl border bg-card shadow-xl">
               <img
-                src="https://placehold.co/600x450/0F4C5C/ffffff?text=Consultorio+Sonrisa"
+                src="/images/consultorio-hero.jpg"
                 alt="Consultorio odontológico moderno"
                 className="h-full w-full object-cover"
               />
