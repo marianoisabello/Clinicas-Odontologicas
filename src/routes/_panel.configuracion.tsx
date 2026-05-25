@@ -2,6 +2,7 @@ import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/_panel/configuracion")({
 
 function ConfigPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [config, setConfig] = useState<Record<string, string>>({});
   const { google: googleParam } = useSearch({ from: "/_panel/configuracion" });
 
@@ -106,10 +108,10 @@ function ConfigPage() {
         <TabsContent value="integraciones">
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Conectá el Google Calendar de cada profesional para sincronizar turnos automáticamente.
+              Conectá tu Google Calendar para sincronizar turnos automáticamente.
               Los eventos del calendario también bloquean la disponibilidad para el agente de WhatsApp.
             </p>
-            {profiles.map((p) => (
+            {profiles.filter((p) => p.id === user?.id).map((p) => (
               <GoogleCalendarCard key={p.id as string} profile={p} />
             ))}
           </div>
