@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import 'dotenv/config';
 import { procesarMensaje } from './agent/index.js';
 import { enviarWhatsApp } from './lib/twilio.js';
@@ -12,30 +13,20 @@ import {
 import { buscarPorTelefono, crearPacientePreliminar } from './services/pacientes.js';
 import { rutaTest } from './routes/test.js';
 import { rutaGoogle } from './routes/google.js';
+import { rutaAdmin } from './routes/admin.js';
 
 const app = express();
 
-// CORS para permitir requests desde el frontend
-app.use((req, res, next) => {
-  const allowedOrigins = [
+app.use(cors({
+  origin: [
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://localhost:5173',
+    'https://clinicas-odontologicas.vercel.app',
     process.env.FRONTEND_URL,
-  ].filter(Boolean);
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
+  ].filter(Boolean),
+  credentials: true,
+}));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -53,6 +44,9 @@ app.use('/test', rutaTest);
 
 // OAuth Google Calendar
 app.use('/auth/google', rutaGoogle);
+
+// ABM profesionales (requiere rol admin)
+app.use('/admin', rutaAdmin);
 
 /**
  * Webhook de Meta WhatsApp - Verificacion (GET)
