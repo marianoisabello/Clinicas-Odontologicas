@@ -2,6 +2,7 @@ import express from 'express';
 import 'dotenv/config';
 import { procesarMensaje } from './agent/index.js';
 import { enviarWhatsApp } from './lib/twilio.js';
+import { enviarWhatsAppMeta, verificarWebhookMeta, extraerMensajesMeta } from './lib/meta-whatsapp.js';
 import {
   obtenerOCrearConversacion,
   guardarMensaje,
@@ -13,36 +14,96 @@ import { rutaTest } from './routes/test.js';
 import { rutaGoogle } from './routes/google.js';
 
 const app = express();
+
+// CORS para permitir requests desde el frontend
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    process.env.FRONTEND_URL,
+  ].filter(Boolean);
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-app.get('/health', (req, res) => res.json({ ok: true }));
+// Determinar si usar Meta o Twilio
+const usarMeta = () => !!process.env.META_ACCESS_TOKEN;
 
-// Ruta de testing (sin Twilio) — útil para probar el agente con curl
+app.get('/health', (req, res) => res.json({ 
+  ok: true, 
+  provider: usarMeta() ? 'meta' : 'twilio',
+  timestamp: new Date().toISOString()
+}));
+
+// Ruta de testing (sin WhatsApp) — útil para probar el agente con curl
 app.use('/test', rutaTest);
 
 // OAuth Google Calendar
 app.use('/auth/google', rutaGoogle);
 
 /**
- * Webhook de Twilio WhatsApp.
+ * Webhook de Meta WhatsApp - Verificacion (GET)
+ */
+app.get('/webhook/whatsapp', (req, res) => {
+  const result = verificarWebhookMeta(req);
+  if (result.ok) {
+    return res.status(200).send(result.challenge);
+  }
+  return res.sendStatus(403);
+});
+
+/**
+ * Webhook de WhatsApp (POST) - Soporta Twilio y Meta
  */
 app.post('/webhook/whatsapp', async (req, res) => {
-  res.type('text/xml').send('<Response></Response>');
+  // Detectar si es Meta o Twilio por el formato del body
+  const esMeta = req.body.object === 'whatsapp_business_account';
 
-  const telefono = req.body.From;
-  const mensaje = (req.body.Body || '').trim();
+  if (esMeta) {
+    // Meta requiere respuesta 200 inmediata
+    res.sendStatus(200);
 
-  if (!telefono || !mensaje) return;
+    const mensajes = extraerMensajesMeta(req.body);
+    for (const { telefono, mensaje } of mensajes) {
+      if (telefono && mensaje) {
+        try {
+          await manejarMensajeEntrante(`+${telefono}`, mensaje, 'meta');
+        } catch (err) {
+          console.error('Error procesando mensaje Meta:', err);
+        }
+      }
+    }
+  } else {
+    // Twilio
+    res.type('text/xml').send('<Response></Response>');
 
-  try {
-    await manejarMensajeEntrante(telefono, mensaje);
-  } catch (err) {
-    console.error('Error procesando mensaje:', err);
+    const telefono = req.body.From;
+    const mensaje = (req.body.Body || '').trim();
+
+    if (telefono && mensaje) {
+      try {
+        await manejarMensajeEntrante(telefono, mensaje, 'twilio');
+      } catch (err) {
+        console.error('Error procesando mensaje Twilio:', err);
+      }
+    }
   }
 });
 
-async function manejarMensajeEntrante(telefono, mensaje) {
+async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
   let paciente = await buscarPorTelefono(telefono);
   if (!paciente) paciente = await crearPacientePreliminar(telefono);
 
@@ -56,7 +117,7 @@ async function manejarMensajeEntrante(telefono, mensaje) {
 
   const iaActiva = await iaEstaActiva(conversacion.id);
   if (!iaActiva) {
-    console.log(`⏸️  IA pausada en conversación ${conversacion.id}`);
+    console.log(`IA pausada en conversación ${conversacion.id}`);
     return;
   }
 
@@ -70,7 +131,14 @@ async function manejarMensajeEntrante(telefono, mensaje) {
     historial: historialPrev,
   });
 
-  const envio = await enviarWhatsApp(telefono, respuesta);
+  // Enviar respuesta segun el provider
+  let envio;
+  if (provider === 'meta' || usarMeta()) {
+    envio = await enviarWhatsAppMeta(telefono, respuesta);
+  } else {
+    envio = await enviarWhatsApp(telefono, respuesta);
+  }
+
   if (envio.ok) {
     await guardarMensaje({
       conversacionId: conversacion.id,
@@ -82,10 +150,17 @@ async function manejarMensajeEntrante(telefono, mensaje) {
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🦷 Consultorio backend escuchando en puerto ${PORT}`);
-  console.log(`   Health:  GET  /health`);
-  console.log(`   Test:    POST /test/mensaje  (sin Twilio)`);
-  console.log(`   Webhook: POST /webhook/whatsapp`);
-  console.log(`   Google:  GET  /auth/google/start?profesional_id=xxx`);
-});
+
+// Solo iniciar servidor si no estamos en Vercel
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Consultorio backend escuchando en puerto ${PORT}`);
+    console.log(`   Provider: ${usarMeta() ? 'Meta' : 'Twilio'}`);
+    console.log(`   Health:   GET  /health`);
+    console.log(`   Test:     POST /test/mensaje`);
+    console.log(`   Webhook:  POST /webhook/whatsapp`);
+    console.log(`   Google:   GET  /auth/google/start?profesional_id=xxx`);
+  });
+}
+
+export default app;
