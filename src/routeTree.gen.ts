@@ -17,6 +17,7 @@ import { Route as PanelRouteImport } from './routes/_panel'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PanelWhatsappRouteImport } from './routes/_panel.whatsapp'
 import { Route as PanelTratamientosRouteImport } from './routes/_panel.tratamientos'
+import { Route as PanelProfesionalesRouteImport } from './routes/_panel.profesionales'
 import { Route as PanelPacientesRouteImport } from './routes/_panel.pacientes'
 import { Route as PanelDashboardRouteImport } from './routes/_panel.dashboard'
 import { Route as PanelConsultasRouteImport } from './routes/_panel.consultas'
@@ -63,6 +64,11 @@ const PanelTratamientosRoute = PanelTratamientosRouteImport.update({
   path: '/tratamientos',
   getParentRoute: () => PanelRoute,
 } as any)
+const PanelProfesionalesRoute = PanelProfesionalesRouteImport.update({
+  id: '/profesionales',
+  path: '/profesionales',
+  getParentRoute: () => PanelRoute,
+} as any)
 const PanelPacientesRoute = PanelPacientesRouteImport.update({
   id: '/pacientes',
   path: '/pacientes',
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/consultas': typeof PanelConsultasRoute
   '/dashboard': typeof PanelDashboardRoute
   '/pacientes': typeof PanelPacientesRouteWithChildren
+  '/profesionales': typeof PanelProfesionalesRoute
   '/tratamientos': typeof PanelTratamientosRoute
   '/whatsapp': typeof PanelWhatsappRoute
   '/pacientes/$id': typeof PanelPacientesIdRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/consultas': typeof PanelConsultasRoute
   '/dashboard': typeof PanelDashboardRoute
   '/pacientes': typeof PanelPacientesRouteWithChildren
+  '/profesionales': typeof PanelProfesionalesRoute
   '/tratamientos': typeof PanelTratamientosRoute
   '/whatsapp': typeof PanelWhatsappRoute
   '/pacientes/$id': typeof PanelPacientesIdRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/_panel/consultas': typeof PanelConsultasRoute
   '/_panel/dashboard': typeof PanelDashboardRoute
   '/_panel/pacientes': typeof PanelPacientesRouteWithChildren
+  '/_panel/profesionales': typeof PanelProfesionalesRoute
   '/_panel/tratamientos': typeof PanelTratamientosRoute
   '/_panel/whatsapp': typeof PanelWhatsappRoute
   '/_panel/pacientes/$id': typeof PanelPacientesIdRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/consultas'
     | '/dashboard'
     | '/pacientes'
+    | '/profesionales'
     | '/tratamientos'
     | '/whatsapp'
     | '/pacientes/$id'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/consultas'
     | '/dashboard'
     | '/pacientes'
+    | '/profesionales'
     | '/tratamientos'
     | '/whatsapp'
     | '/pacientes/$id'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/_panel/consultas'
     | '/_panel/dashboard'
     | '/_panel/pacientes'
+    | '/_panel/profesionales'
     | '/_panel/tratamientos'
     | '/_panel/whatsapp'
     | '/_panel/pacientes/$id'
@@ -257,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelTratamientosRouteImport
       parentRoute: typeof PanelRoute
     }
+    '/_panel/profesionales': {
+      id: '/_panel/profesionales'
+      path: '/profesionales'
+      fullPath: '/profesionales'
+      preLoaderRoute: typeof PanelProfesionalesRouteImport
+      parentRoute: typeof PanelRoute
+    }
     '/_panel/pacientes': {
       id: '/_panel/pacientes'
       path: '/pacientes'
@@ -320,6 +339,7 @@ interface PanelRouteChildren {
   PanelConsultasRoute: typeof PanelConsultasRoute
   PanelDashboardRoute: typeof PanelDashboardRoute
   PanelPacientesRoute: typeof PanelPacientesRouteWithChildren
+  PanelProfesionalesRoute: typeof PanelProfesionalesRoute
   PanelTratamientosRoute: typeof PanelTratamientosRoute
   PanelWhatsappRoute: typeof PanelWhatsappRoute
 }
@@ -330,6 +350,7 @@ const PanelRouteChildren: PanelRouteChildren = {
   PanelConsultasRoute: PanelConsultasRoute,
   PanelDashboardRoute: PanelDashboardRoute,
   PanelPacientesRoute: PanelPacientesRouteWithChildren,
+  PanelProfesionalesRoute: PanelProfesionalesRoute,
   PanelTratamientosRoute: PanelTratamientosRoute,
   PanelWhatsappRoute: PanelWhatsappRoute,
 }

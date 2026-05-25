@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Calendar, Users, MessageCircle, Mail, Sparkles, Settings,
-  LogOut, Smile, ArrowLeft,
+  LogOut, Smile, ArrowLeft, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +26,10 @@ const nav = [
   { to: "/consultas", label: "Consultas web", icon: Mail },
   { to: "/tratamientos", label: "Tratamientos", icon: Sparkles },
   { to: "/configuracion", label: "Configuración", icon: Settings },
+] as const;
+
+const navAdmin = [
+  { to: "/profesionales", label: "Profesionales", icon: ShieldCheck },
 ] as const;
 
 function AppSidebar() {
@@ -60,6 +64,19 @@ function AppSidebar() {
             <SidebarMenu>
               {nav.map((item) => {
                 const active = pathname === item.to || (item.to !== "/dashboard" && pathname.startsWith(item.to));
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild isActive={active}>
+                      <Link to={item.to}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+              {profile?.rol === "admin" && navAdmin.map((item) => {
+                const active = pathname.startsWith(item.to);
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={active}>
