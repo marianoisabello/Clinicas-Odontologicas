@@ -35,11 +35,11 @@ rutaAdmin.post('/profesionales', requireAdmin, async (req, res) => {
 
   const userId = authData.user.id;
 
-  // 2. Upsert del perfil (por si el trigger no alcanzó a crearlo)
+  // 2. El trigger handle_new_user ya crea el perfil básico.
+  //    Actualizamos los campos adicionales.
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .upsert({
-      id: userId,
+    .update({
       nombre,
       email,
       rol: rol ?? 'odontologo',
@@ -47,6 +47,7 @@ rutaAdmin.post('/profesionales', requireAdmin, async (req, res) => {
       color_calendario: color_calendario ?? '#0F4C5C',
       activo: true,
     })
+    .eq('id', userId)
     .select()
     .single();
 

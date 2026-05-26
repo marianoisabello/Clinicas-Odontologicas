@@ -14,11 +14,7 @@ import { google } from 'googleapis';
 import crypto from 'crypto';
 import { supabase } from '../../lib/supabase.js';
 
-const SCOPES = [
-  'https://www.googleapis.com/auth/calendar.events',
-  'openid',
-  'email',
-];
+const SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
 
 // AES-256-GCM: IV de 12 bytes, auth tag de 16 bytes
 const ALGO = 'aes-256-gcm';
@@ -91,19 +87,17 @@ export function getAuthUrl(profesionalId) {
 export async function exchangeCode(code) {
   const oAuth2Client = createOAuthClient();
   const { tokens } = await oAuth2Client.getToken(code);
+  oAuth2Client.setCredentials(tokens);
 
-  // Extraer email del id_token (viene incluido con el scope 'email')
-  let email = '';
-  if (tokens.id_token) {
-    const payload = JSON.parse(Buffer.from(tokens.id_token.split('.')[1], 'base64url').toString());
-    email = payload.email ?? '';
-  }
+  // Obtener email del usuario autenticado
+  const oauth2 = google.oauth2({ version: 'v2', auth: oAuth2Client });
+  const { data: userInfo } = await oauth2.userinfo.get();
 
   return {
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,
-    expiry_date: tokens.expiry_date,
-    email,
+    expiry_date: tokens.expiry_date, // ms epoch
+    email: userInfo.email,
   };
 }
 
