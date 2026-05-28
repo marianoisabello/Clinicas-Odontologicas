@@ -4,14 +4,25 @@ import 'dotenv/config';
 
 const app = express();
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  'https://clinicas-odontologicas.vercel.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'https://clinicas-odontologicas.vercel.app',
-    process.env.FRONTEND_URL,
-  ].filter(Boolean),
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // server-to-server o curl
+    if (
+      ALLOWED_ORIGINS.includes(origin) ||
+      /^https:\/\/clinicas-odontologicas(-[a-z0-9-]+)?\.vercel\.app$/.test(origin)
+    ) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS bloqueado: ${origin}`));
+  },
   credentials: true,
 }));
 app.use(express.urlencoded({ extended: false }));
