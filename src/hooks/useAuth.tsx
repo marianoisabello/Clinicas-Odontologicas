@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-type AppRole = "admin" | "dentista" | "recepcion" | "paciente";
+type AppRole = "admin" | "odontologo" | "asistente" | "recepcion";
 
 interface AuthContextValue {
   user: User | null;
@@ -22,8 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadRoles = async (userId: string) => {
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-    setRoles((data?.map((r: { role: AppRole }) => r.role) ?? []) as AppRole[]);
+    const { data } = await supabase.from("profiles").select("rol").eq("id", userId).maybeSingle();
+    setRoles(data?.rol ? [data.rol as AppRole] : []);
   };
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
-        setTimeout(() => loadRoles(newSession.user.id), 0);
+        loadRoles(newSession.user.id);
       } else {
         setRoles([]);
       }

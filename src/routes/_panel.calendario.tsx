@@ -38,7 +38,7 @@ interface Turno {
   fecha_hora_inicio: string; fecha_hora_fin: string;
   tratamiento: string | null; estado: string; notas: string | null;
   pacientes?: { nombre: string; apellido: string } | { nombre: string; apellido: string }[] | null;
-  profesionales?: { nombre: string; color_calendario?: string } | null;
+  profiles?: { nombre: string; color_calendario?: string } | { nombre: string; color_calendario?: string }[] | null;
 }
 
 function turnoLayout(turno: Turno): { top: number; height: number } {
@@ -256,7 +256,7 @@ function CalendarioPage() {
                   {dayTurnos.map((t) => {
                     const { top, height } = turnoLayout(t);
                     const p = getOne(t.pacientes as { nombre: string; apellido: string }[] | { nombre: string; apellido: string } | null);
-                    const color = t.profesionales?.color_calendario ?? "#0F4C5C";
+                    const color = (getOne(t.profiles as { nombre: string; color_calendario?: string }[] | { nombre: string; color_calendario?: string } | null))?.color_calendario ?? "#0F4C5C";
                     return (
                       <button
                         key={t.id}

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, MessageCircle } from "lucide-react";
 import { fmtDateTime } from "@/lib/format";
-import { waLink } from "@/lib/config";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_panel/consultas")({

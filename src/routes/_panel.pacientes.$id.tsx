@@ -15,7 +15,6 @@ import {
 import { ArrowLeft, Plus, MessageCircle } from "lucide-react";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import { toast } from "sonner";
-import { waLink } from "@/lib/config";
 
 export const Route = createFileRoute("/_panel/pacientes/$id")({
   component: PacienteDetalle,
@@ -101,7 +100,7 @@ function PacienteDetalle() {
         </div>
         {paciente.telefono && (
           <Button asChild className="bg-[#25D366] text-white hover:bg-[#25D366]/90">
-            <a href={waLink(`Hola ${paciente.nombre}`).replace("5491100000000", paciente.telefono.replace(/\D/g, ""))} target="_blank" rel="noopener noreferrer">
+            <a href={`https://wa.me/${paciente.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${paciente.nombre}`)}`} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
             </a>
           </Button>
