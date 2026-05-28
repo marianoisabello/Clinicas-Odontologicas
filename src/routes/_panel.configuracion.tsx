@@ -149,6 +149,7 @@ function ProfileCard({ profile, onUpdated }: { profile: Record<string, unknown>;
           <Select value={form.rol} onValueChange={(v) => setForm({ ...form, rol: v })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="odontologo">Odontólogo/a</SelectItem>
               <SelectItem value="asistente">Asistente</SelectItem>
               <SelectItem value="recepcion">Recepción</SelectItem>

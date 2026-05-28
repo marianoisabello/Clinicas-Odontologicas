@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_panel/profesionales")({
   component: ProfesionalesPage,
 });
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3000";
+const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "https://consultorio-backend-eight.vercel.app";
 
 async function getToken() {
   const { data } = await supabase.auth.getSession();

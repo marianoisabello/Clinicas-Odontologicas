@@ -27,7 +27,12 @@ function NosotrosPage() {
   const { data: profesionales = [] } = useQuery({
     queryKey: ["profesionales-publicos"],
     queryFn: async () => {
-      const { data } = await supabase.from("profesionales_publicos").select("*");
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, nombre, especialidad, bio, foto_url")
+        .eq("activo", true)
+        .in("rol", ["odontologo", "admin"])
+        .order("nombre");
       return data ?? [];
     },
   });
