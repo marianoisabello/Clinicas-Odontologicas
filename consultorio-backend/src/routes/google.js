@@ -29,7 +29,11 @@ rutaGoogle.get('/start', async (req, res) => {
     .eq('id', profesional_id)
     .single();
 
-  if (error || !profesional) {
+  if (error) {
+    console.error(`[Google OAuth] Error Supabase: ${error.message}`);
+    return res.status(500).json({ error: `Error base de datos: ${error.message}` });
+  }
+  if (!profesional) {
     console.error(`[Google OAuth] Profesional no encontrado: ${profesional_id}`);
     return res.status(404).json({ error: 'Profesional no encontrado' });
   }
