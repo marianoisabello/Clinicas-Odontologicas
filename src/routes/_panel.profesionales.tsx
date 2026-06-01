@@ -194,9 +194,11 @@ function ProfesionalesPage() {
 
 Te damos la bienvenida al sistema de gestión del Consultorio Odontológico.
 
-Para ingresar, hacé clic en el siguiente enlace:
+Para acceder al sistema hacé clic en el siguiente enlace — te va a llevar directamente a la plataforma ya con tu sesión iniciada:
 
 ${link}
+
+Una vez adentro vas a ver el menú principal con todas las secciones disponibles para tu rol.
 
 ──────────────────────────────
 PRINCIPALES FUNCIONES DEL SISTEMA

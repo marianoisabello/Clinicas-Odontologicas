@@ -96,7 +96,7 @@ rutaAdmin.post('/profesionales/:id/invitar', requireAdmin, async (req, res) => {
   const { data, error } = await supabase.auth.admin.generateLink({
     type: 'magiclink',
     email: profile.email,
-    options: { redirectTo: `${frontendUrl}/dashboard` },
+    options: { redirectTo: frontendUrl },
   });
 
   if (error) return res.status(500).json({ error: error.message });
