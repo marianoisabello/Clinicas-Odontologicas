@@ -21,7 +21,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, MoreHorizontal, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { Plus, Pencil, Trash2, MoreHorizontal, TrendingUp, TrendingDown, Wallet, Mail, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_panel/administracion")({
@@ -403,6 +403,7 @@ function CuentasACobrar() {
   const qc = useQueryClient();
   const [filtro, setFiltro] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [enviando, setEnviando] = useState<FacturaCliente | null>(null);
   const [editando, setEditando] = useState<FacturaCliente | null>(null);
   const [form, setForm] = useState<typeof emptyCli>({ ...emptyCli });
 
@@ -549,11 +550,18 @@ function CuentasACobrar() {
                   <Badge variant={ESTADO_CLI[f.estado]?.variant ?? "outline"}>{ESTADO_CLI[f.estado]?.label ?? f.estado}</Badge>
                 </TableCell>
                 <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" title="Enviar por email / WhatsApp" onClick={() => setEnviando(f)}>
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEnviando(f)}>
+                        <Mail className="mr-2 h-3.5 w-3.5" /> Enviar factura
+                      </DropdownMenuItem>
                       {f.estado !== "cobrada" && (
                         <DropdownMenuItem onClick={() => cambiarEstado.mutate({ id: f.id, estado: "cobrada" })}>
                           Marcar como cobrada
@@ -580,6 +588,7 @@ function CuentasACobrar() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -601,7 +610,129 @@ function CuentasACobrar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {enviando && (
+        <EnviarFacturaDialog factura={enviando} onClose={() => setEnviando(null)} />
+      )}
     </div>
+  );
+}
+
+// ─── Dialog Enviar Factura ────────────────────────────────────────────────────
+
+function EnviarFacturaDialog({ factura, onClose }: { factura: FacturaCliente; onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [telefono, setTelefono] = useState("");
+
+  // Si hay paciente_id, buscar sus datos de contacto
+  useQuery({
+    queryKey: ["paciente-contacto", factura.paciente_id],
+    enabled: !!factura.paciente_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("pacientes")
+        .select("email, telefono")
+        .eq("id", factura.paciente_id!)
+        .maybeSingle();
+      if (data?.email)    setEmail(data.email);
+      if (data?.telefono) setTelefono(data.telefono);
+      return data;
+    },
+  });
+
+  const comprobante = [factura.tipo_factura, factura.numero_comprobante].filter(Boolean).join(" ");
+  const asunto = `Factura ${comprobante} — ${factura.concepto ?? factura.paciente_nombre}`;
+  const cuerpo = [
+    `Estimado/a ${factura.paciente_nombre},`,
+    ``,
+    `Le hacemos llegar el detalle de su factura:`,
+    ``,
+    `  Comprobante: ${comprobante || "—"}`,
+    `  Concepto:    ${factura.concepto ?? "—"}`,
+    `  Fecha:       ${factura.fecha}`,
+    factura.fecha_vencimiento ? `  Vencimiento: ${factura.fecha_vencimiento}` : "",
+    `  Total:       ${fmt(Number(factura.monto))} ${factura.moneda}`,
+    ``,
+    `Ante cualquier consulta no dude en comunicarse.`,
+    `Saludos cordiales.`,
+  ].filter((l) => l !== undefined).join("\n");
+
+  const mensajeWsp = [
+    `Hola ${factura.paciente_nombre} 👋`,
+    `Le enviamos el detalle de su factura:`,
+    ``,
+    `📄 *${comprobante || "Factura"}*`,
+    factura.concepto ? `📝 ${factura.concepto}` : "",
+    `📅 Fecha: ${factura.fecha}`,
+    factura.fecha_vencimiento ? `⏰ Vence: ${factura.fecha_vencimiento}` : "",
+    `💰 Total: ${fmt(Number(factura.monto))} ${factura.moneda}`,
+    ``,
+    `Ante cualquier consulta estamos a disposición.`,
+  ].filter(Boolean).join("\n");
+
+  function abrirEmail() {
+    if (!email) { toast.error("Ingresá un email"); return; }
+    const url = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    window.open(url, "_blank");
+  }
+
+  function abrirWhatsApp() {
+    if (!telefono) { toast.error("Ingresá un teléfono"); return; }
+    const numero = telefono.replace(/\D/g, "");
+    const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensajeWsp)}`;
+    window.open(url, "_blank");
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle>Enviar factura — {factura.paciente_nombre}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="rounded-md bg-muted px-4 py-3 text-sm space-y-1">
+            <p><span className="text-muted-foreground">Comprobante:</span> {comprobante || "—"}</p>
+            <p><span className="text-muted-foreground">Total:</span> <span className="font-semibold">{fmt(Number(factura.monto))} {factura.moneda}</span></p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Email del cliente</Label>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="cliente@mail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Button variant="outline" onClick={abrirEmail} title="Abrir cliente de correo">
+                <Mail className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>WhatsApp (con código de país)</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="+5491112345678"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+              />
+              <Button variant="outline" onClick={abrirWhatsApp} title="Abrir WhatsApp">
+                <MessageCircle className="h-4 w-4 text-green-600" />
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Se abre tu cliente de correo o WhatsApp con el mensaje prellenado. No se envía automáticamente.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
