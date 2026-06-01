@@ -1,13 +1,13 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
-  "rewrites": [
-    { "source": "/health", "destination": "/api/backend" },
-    { "source": "/webhook/:path*", "destination": "/api/backend" },
-    { "source": "/admin/:path*", "destination": "/api/backend" },
-    { "source": "/auth/google/:path*", "destination": "/api/backend" },
-    { "source": "/test/:path*", "destination": "/api/backend" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/health", "dest": "/api/backend" },
+    { "src": "/webhook/(.*)", "dest": "/api/backend" },
+    { "src": "/admin/(.*)", "dest": "/api/backend" },
+    { "src": "/auth/google/(.*)", "dest": "/api/backend" },
+    { "src": "/test/(.*)", "dest": "/api/backend" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
