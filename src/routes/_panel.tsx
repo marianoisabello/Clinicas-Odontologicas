@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Calendar, Users, MessageCircle, Mail, Sparkles, Settings,
-  LogOut, Smile, ArrowLeft, ShieldCheck,
+  LogOut, Smile, ArrowLeft, ShieldCheck, Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,7 @@ const nav = [
   { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { to: "/consultas", label: "Consultas web", icon: Mail },
   { to: "/tratamientos", label: "Tratamientos", icon: Sparkles },
+  { to: "/administracion", label: "Administración", icon: Banknote },
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ] as const;
 
