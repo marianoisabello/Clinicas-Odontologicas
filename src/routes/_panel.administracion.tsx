@@ -38,6 +38,8 @@ interface FacturaProveedor {
   tipo_factura: string;
   fecha: string;
   fecha_vencimiento: string | null;
+  importe_neto: number | null;
+  impuesto: number | null;
   monto: number;
   moneda: string;
   estado: "pendiente" | "pagada" | "vencida";
@@ -84,7 +86,7 @@ const TIPOS = ["A", "B", "C", "X", "Ticket", "Recibo", "Otro"];
 
 const emptyProv = {
   proveedor: "", concepto: "", numero_comprobante: "", tipo_factura: "B",
-  fecha: hoy(), fecha_vencimiento: "", monto: "", moneda: "ARS",
+  fecha: hoy(), fecha_vencimiento: "", importe_neto: "", impuesto: "", monto: "", moneda: "ARS",
   estado: "pendiente", notas: "",
 };
 
@@ -211,6 +213,8 @@ function CuentasAPagar() {
         tipo_factura: form.tipo_factura,
         fecha: form.fecha,
         fecha_vencimiento: form.fecha_vencimiento || null,
+        importe_neto: form.importe_neto !== "" ? parseFloat(form.importe_neto as string) : null,
+        impuesto: form.impuesto !== "" ? parseFloat(form.impuesto as string) : null,
         monto: parseFloat(form.monto as string),
         moneda: form.moneda,
         estado: form.estado,
@@ -275,6 +279,8 @@ function CuentasAPagar() {
       tipo_factura: f.tipo_factura,
       fecha: f.fecha,
       fecha_vencimiento: f.fecha_vencimiento ?? "",
+      importe_neto: f.importe_neto != null ? f.importe_neto.toString() : "",
+      impuesto: f.impuesto != null ? f.impuesto.toString() : "",
       monto: f.monto.toString(),
       moneda: f.moneda,
       estado: f.estado,
@@ -307,16 +313,18 @@ function CuentasAPagar() {
               <TableHead>Comprobante</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Vencimiento</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
+              <TableHead className="text-right">Neto</TableHead>
+              <TableHead className="text-right">Impuesto</TableHead>
+              <TableHead className="text-right">Total</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
             ) : filtradas.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Sin facturas</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">Sin facturas</TableCell></TableRow>
             ) : filtradas.map((f) => (
               <TableRow key={f.id}>
                 <TableCell className="font-medium">{f.proveedor}</TableCell>
@@ -326,6 +334,8 @@ function CuentasAPagar() {
                 <TableCell className={!f.fecha_vencimiento ? "text-muted-foreground" : f.estado === "vencida" ? "text-destructive font-medium" : ""}>
                   {f.fecha_vencimiento ?? "—"}
                 </TableCell>
+                <TableCell className="text-right text-muted-foreground">{f.importe_neto != null ? fmt(Number(f.importe_neto)) : "—"}</TableCell>
+                <TableCell className="text-right text-muted-foreground">{f.impuesto != null ? fmt(Number(f.impuesto)) : "—"}</TableCell>
                 <TableCell className="text-right font-medium">{fmt(Number(f.monto))}</TableCell>
                 <TableCell>
                   <Badge variant={ESTADO_PROV[f.estado]?.variant ?? "outline"}>{ESTADO_PROV[f.estado]?.label ?? f.estado}</Badge>
@@ -627,7 +637,13 @@ function FormProveedor({ form, setForm }: { form: typeof emptyProv; setForm: Set
         <FormField label="Vencimiento">
           <Input type="date" value={form.fecha_vencimiento} onChange={f("fecha_vencimiento")} />
         </FormField>
-        <FormField label="Monto *">
+        <FormField label="Importe Neto">
+          <Input type="number" min="0" step="0.01" value={form.importe_neto} onChange={f("importe_neto")} placeholder="0.00" />
+        </FormField>
+        <FormField label="Impuesto">
+          <Input type="number" min="0" step="0.01" value={form.impuesto} onChange={f("impuesto")} placeholder="0.00" />
+        </FormField>
+        <FormField label="Total *">
           <Input type="number" min="0" step="0.01" value={form.monto} onChange={f("monto")} placeholder="0.00" />
         </FormField>
         <FormField label="Estado">
