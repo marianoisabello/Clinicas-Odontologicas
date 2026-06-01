@@ -206,7 +206,7 @@ function GoogleCalendarCard({ profile }: { profile: Record<string, unknown> }) {
   });
 
   const handleConnect = () => {
-    window.open(`${backendUrl}/auth/google/start?profesional_id=${profesionalId}`, "_blank");
+    window.open(`${backendUrl}/api/auth-google?profesional_id=${profesionalId}`, "_blank");
     // Refresh optimista: si el usuario completa el flujo OAuth rápido, actualizamos el estado
     setTimeout(() => {
       qc.invalidateQueries({ queryKey: ["google-cal-creds", profesionalId] });

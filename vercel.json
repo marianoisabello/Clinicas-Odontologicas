@@ -1,22 +1,9 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/auth/google/callback",
-      "destination": "/api/auth-google-callback"
-    },
-    {
-      "source": "/auth/google/:path*",
-      "destination": "/api/backend"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/((?!api|auth).*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
