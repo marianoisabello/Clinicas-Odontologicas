@@ -14,7 +14,11 @@ import { google } from 'googleapis';
 import crypto from 'crypto';
 import { supabase } from '../../lib/supabase.js';
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events',
+  'openid',
+  'email',
+];
 
 // AES-256-GCM: IV de 12 bytes, auth tag de 16 bytes
 const ALGO = 'aes-256-gcm';
@@ -87,17 +91,26 @@ export function getAuthUrl(profesionalId) {
 export async function exchangeCode(code) {
   const oAuth2Client = createOAuthClient();
   const { tokens } = await oAuth2Client.getToken(code);
-  oAuth2Client.setCredentials(tokens);
 
-  // Obtener email del usuario autenticado
-  const oauth2 = google.oauth2({ version: 'v2', auth: oAuth2Client });
-  const { data: userInfo } = await oauth2.userinfo.get();
+  // Extraer email del id_token (JWT) — no requiere llamada extra a userinfo
+  let email = null;
+  if (tokens.id_token) {
+    try {
+      const base64Payload = tokens.id_token.split('.')[1]
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+      const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString('utf8'));
+      email = payload.email ?? null;
+    } catch {
+      // Si falla el decode, email queda null
+    }
+  }
 
   return {
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,
     expiry_date: tokens.expiry_date, // ms epoch
-    email: userInfo.email,
+    email,
   };
 }
 
