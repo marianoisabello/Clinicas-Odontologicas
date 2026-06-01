@@ -1,13 +1,14 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "routes": [
-    { "src": "/health", "dest": "/api/backend" },
-    { "src": "/webhook/(.*)", "dest": "/api/backend" },
-    { "src": "/admin/(.*)", "dest": "/api/backend" },
-    { "src": "/auth/google/(.*)", "dest": "/api/backend" },
-    { "src": "/test/(.*)", "dest": "/api/backend" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    {
+      "source": "/auth/google/callback",
+      "destination": "/api/auth-google-callback"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }
