@@ -18,6 +18,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_panel/configuracion")({
   validateSearch: (search: Record<string, unknown>) => ({
     google: (search.google as string) ?? undefined,
+    detalle: (search.detalle as string) ?? undefined,
   }),
   component: ConfigPage,
 });
@@ -26,7 +27,7 @@ function ConfigPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [config, setConfig] = useState<Record<string, string>>({});
-  const { google: googleParam } = useSearch({ from: "/_panel/configuracion" });
+  const { google: googleParam, detalle } = useSearch({ from: "/_panel/configuracion" });
 
   // Mostrar toast según el resultado del flujo OAuth de Google
   useEffect(() => {
@@ -34,7 +35,7 @@ function ConfigPage() {
       toast.success("Google Calendar conectado correctamente");
       qc.invalidateQueries({ queryKey: ["google-cal-creds"] });
     } else if (googleParam === "error") {
-      toast.error("No se pudo conectar Google Calendar. Intentá de nuevo.");
+      toast.error(`Error Google Calendar: ${detalle ?? "desconocido"}`);
     }
   }, [googleParam, qc]);
 
