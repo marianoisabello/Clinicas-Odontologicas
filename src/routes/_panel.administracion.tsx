@@ -21,7 +21,12 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, MoreHorizontal, TrendingUp, TrendingDown, Wallet, Mail, MessageCircle } from "lucide-react";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Pencil, Trash2, MoreHorizontal, TrendingUp, TrendingDown, Wallet, Mail, MessageCircle, FileText, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_panel/administracion")({
@@ -91,7 +96,7 @@ const emptyProv = {
 };
 
 const emptyCli = {
-  paciente_nombre: "", concepto: "", numero_comprobante: "", tipo_factura: "B",
+  paciente_id: "", paciente_nombre: "", concepto: "", numero_comprobante: "", tipo_factura: "B",
   fecha: hoy(), fecha_vencimiento: "", monto: "", moneda: "ARS",
   estado: "pendiente", notas: "",
 };
@@ -424,6 +429,7 @@ function CuentasACobrar() {
   const guardar = useMutation({
     mutationFn: async () => {
       const payload = {
+        paciente_id: form.paciente_id || null,
         paciente_nombre: form.paciente_nombre,
         concepto: form.concepto || null,
         numero_comprobante: form.numero_comprobante || null,
@@ -488,6 +494,7 @@ function CuentasACobrar() {
   function abrirEditar(f: FacturaCliente) {
     setEditando(f);
     setForm({
+      paciente_id: f.paciente_id ?? "",
       paciente_nombre: f.paciente_nombre,
       concepto: f.concepto ?? "",
       numero_comprobante: f.numero_comprobante ?? "",
@@ -624,6 +631,15 @@ function EnviarFacturaDialog({ factura, onClose }: { factura: FacturaCliente; on
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
 
+  // Config del consultorio para el PDF
+  const { data: config } = useQuery({
+    queryKey: ["configuracion"],
+    queryFn: async () => {
+      const { data } = await supabase.from("configuracion").select("*").maybeSingle();
+      return data as Record<string, string> | null;
+    },
+  });
+
   // Si hay paciente_id, buscar sus datos de contacto
   useQuery({
     queryKey: ["paciente-contacto", factura.paciente_id],
@@ -724,8 +740,23 @@ function EnviarFacturaDialog({ factura, onClose }: { factura: FacturaCliente; on
             </div>
           </div>
 
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium mb-2">Generar PDF</p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => verFacturaPDF(factura, config ?? undefined)}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Ver / Imprimir factura como PDF
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1">
+              Se abre una vista previa. Usá "Guardar como PDF" desde el diálogo de impresión.
+            </p>
+          </div>
+
           <p className="text-xs text-muted-foreground">
-            Se abre tu cliente de correo o WhatsApp con el mensaje prellenado. No se envía automáticamente.
+            El email y WhatsApp abren tu cliente local con el mensaje prellenado.
           </p>
         </div>
         <DialogFooter>
@@ -803,7 +834,19 @@ function FormCliente({ form, setForm }: { form: typeof emptyCli; setForm: SetFor
     <div className="grid gap-4 py-2">
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField label="Cliente / Paciente *" full>
-          <Input value={form.paciente_nombre} onChange={f("paciente_nombre")} placeholder="Nombre del cliente" />
+          <PacienteCombobox
+            pacienteId={form.paciente_id}
+            pacienteNombre={form.paciente_nombre}
+            onSelect={(id, nombre) => setForm((p) => ({ ...p, paciente_id: id, paciente_nombre: nombre }))}
+            onClear={() => setForm((p) => ({ ...p, paciente_id: "", paciente_nombre: "" }))}
+          />
+          {/* Permite editar el nombre manualmente o escribir uno libre */}
+          <Input
+            className="mt-1"
+            value={form.paciente_nombre}
+            onChange={(e) => setForm((p) => ({ ...p, paciente_nombre: e.target.value, paciente_id: "" }))}
+            placeholder="O escribí el nombre manualmente"
+          />
         </FormField>
         <FormField label="Concepto">
           <Input value={form.concepto} onChange={f("concepto")} placeholder="Descripción del servicio" />
@@ -843,6 +886,194 @@ function FormCliente({ form, setForm }: { form: typeof emptyCli; setForm: SetFor
     </div>
   );
 }
+
+// ─── Combobox búsqueda de paciente ───────────────────────────────────────────
+
+function PacienteCombobox({ pacienteId, pacienteNombre, onSelect, onClear }: {
+  pacienteId: string;
+  pacienteNombre: string;
+  onSelect: (id: string, nombre: string) => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+
+  const { data: resultados = [] } = useQuery({
+    queryKey: ["pacientes-search", busqueda],
+    enabled: busqueda.length >= 2,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("pacientes")
+        .select("id, nombre, apellido")
+        .or(`nombre.ilike.%${busqueda}%,apellido.ilike.%${busqueda}%`)
+        .order("apellido")
+        .limit(15);
+      return data ?? [];
+    },
+  });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+          <span className="truncate text-left">
+            {pacienteId && pacienteNombre ? pacienteNombre : "Buscar paciente del sistema..."}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[360px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Escribí nombre o apellido..."
+            value={busqueda}
+            onValueChange={setBusqueda}
+          />
+          <CommandList>
+            {busqueda.length < 2 ? (
+              <CommandEmpty>Escribí al menos 2 caracteres para buscar</CommandEmpty>
+            ) : resultados.length === 0 ? (
+              <CommandEmpty>Sin resultados</CommandEmpty>
+            ) : (
+              <CommandGroup>
+                {pacienteId && (
+                  <CommandItem value="__clear__" onSelect={() => { onClear(); setBusqueda(""); setOpen(false); }}>
+                    <span className="text-muted-foreground text-sm">✕ Limpiar selección</span>
+                  </CommandItem>
+                )}
+                {resultados.map((p) => (
+                  <CommandItem
+                    key={p.id}
+                    value={p.id}
+                    onSelect={() => {
+                      onSelect(p.id, `${p.apellido}, ${p.nombre}`);
+                      setBusqueda("");
+                      setOpen(false);
+                    }}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", pacienteId === p.id ? "opacity-100" : "opacity-0")} />
+                    {p.apellido}, {p.nombre}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ─── Generador de PDF (ventana de impresión) ──────────────────────────────────
+
+function verFacturaPDF(
+  factura: FacturaCliente,
+  config?: { nombre_consultorio?: string; direccion?: string; telefono?: string; email?: string }
+) {
+  const comprobante = [factura.tipo_factura, factura.numero_comprobante].filter(Boolean).join(" ");
+  const consultorio = config?.nombre_consultorio || "Consultorio Odontológico";
+  const subtitulo   = [config?.direccion, config?.telefono, config?.email].filter(Boolean).join(" · ");
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Factura ${comprobante} — ${factura.paciente_nombre}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;padding:48px;max-width:740px;margin:0 auto;font-size:14px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:20px;border-bottom:3px solid #0F4C5C}
+    .brand{color:#0F4C5C}
+    .brand h1{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+    .brand p{font-size:11px;color:#666;margin-top:4px}
+    .factura-box{text-align:right}
+    .factura-box h2{font-size:20px;font-weight:700;color:#0F4C5C}
+    .factura-box p{font-size:12px;color:#666;margin-top:3px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
+    .section h3{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:6px}
+    .section p{font-size:14px;line-height:1.5}
+    table{width:100%;border-collapse:collapse;margin-bottom:24px}
+    thead th{background:#f5f7f9;padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#666;border-bottom:2px solid #e5e7eb}
+    thead th.r{text-align:right}
+    tbody td{padding:12px 14px;border-bottom:1px solid #f0f0f0;color:#1a1a1a}
+    tbody td.r{text-align:right}
+    .totals{margin-left:auto;width:280px;margin-bottom:32px}
+    .totals table{width:100%}
+    .totals td{padding:5px 0;font-size:13px;color:#555}
+    .totals td:last-child{text-align:right}
+    .totals tr.total td{font-size:16px;font-weight:700;color:#0F4C5C;border-top:2px solid #0F4C5C;padding-top:10px;margin-top:2px}
+    .nota{background:#f9fafb;border-left:3px solid #0F4C5C;padding:12px 16px;margin-bottom:32px;font-size:13px;color:#555;border-radius:0 6px 6px 0}
+    .footer{border-top:1px solid #e5e7eb;padding-top:16px;text-align:center;font-size:11px;color:#aaa}
+    @media print{body{padding:24px}@page{margin:1cm}}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <h1>🦷 ${consultorio}</h1>
+      ${subtitulo ? `<p>${subtitulo}</p>` : ""}
+    </div>
+    <div class="factura-box">
+      <h2>FACTURA ${comprobante || ""}</h2>
+      <p>Fecha: ${factura.fecha}</p>
+      ${factura.fecha_vencimiento ? `<p>Vencimiento: ${factura.fecha_vencimiento}</p>` : ""}
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="section">
+      <h3>Facturado a</h3>
+      <p><strong>${factura.paciente_nombre}</strong></p>
+    </div>
+    <div class="section" style="text-align:right">
+      <h3>Estado</h3>
+      <p style="font-weight:600;color:${factura.estado === "cobrada" ? "#16a34a" : factura.estado === "vencida" ? "#dc2626" : "#d97706"}">
+        ${factura.estado.charAt(0).toUpperCase() + factura.estado.slice(1)}
+      </p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Concepto</th>
+        <th class="r">Importe</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${factura.concepto || "Servicios odontológicos"}</td>
+        <td class="r">${fmt(Number(factura.monto))} ${factura.moneda}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <table>
+      <tr class="total">
+        <td>TOTAL</td>
+        <td>${fmt(Number(factura.monto))} ${factura.moneda}</td>
+      </tr>
+    </table>
+  </div>
+
+  ${factura.notas ? `<div class="nota">${factura.notas}</div>` : ""}
+
+  <div class="footer">
+    <p>Gracias por elegirnos · ${consultorio}</p>
+  </div>
+
+  <script>window.onload=()=>window.print()</script>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=820,height=960");
+  if (win) { win.document.write(html); win.document.close(); }
+  else toast.error("El navegador bloqueó la ventana emergente. Permitila para generar el PDF.");
+}
+
+// ─── Formularios ──────────────────────────────────────────────────────────────
 
 function FormField({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
   return (
