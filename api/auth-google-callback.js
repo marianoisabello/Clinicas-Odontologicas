@@ -5,7 +5,7 @@ import { supabase } from '../consultorio-backend/src/lib/supabase.js';
 export default async function handler(req, res) {
   const { code, state: profesionalId, error: oauthError } = req.query;
   const frontendUrl = process.env.FRONTEND_URL || 'https://clinicas-odontologicas.vercel.app';
-  const redirectBase = `${frontendUrl}/panel/configuracion`;
+  const redirectBase = `${frontendUrl}/configuracion`;
 
   if (oauthError) {
     console.error(`[Google OAuth] Error devuelto por Google: ${oauthError}`);

@@ -50,7 +50,7 @@ rutaGoogle.get('/callback', async (req, res) => {
   const { code, state: profesionalId, error: oauthError } = req.query;
 
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  const redirectBase = `${frontendUrl}/panel/configuracion`;
+  const redirectBase = `${frontendUrl}/configuracion`;
 
   if (oauthError) {
     console.error(`[Google OAuth] Error devuelto por Google: ${oauthError}`);
