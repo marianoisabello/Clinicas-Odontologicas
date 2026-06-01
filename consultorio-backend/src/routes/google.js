@@ -27,7 +27,7 @@ rutaGoogle.get('/start', async (req, res) => {
     .from('profiles')
     .select('id')
     .eq('id', profesional_id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error(`[Google OAuth] Error Supabase: ${error.message}`);
