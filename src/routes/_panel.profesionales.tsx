@@ -189,15 +189,28 @@ function ProfesionalesPage() {
       return json as { nombre: string; email: string; link: string };
     },
     onSuccess: ({ nombre, email, link }) => {
-      const asunto = encodeURIComponent(`Acceso al sistema — Consultorio Odontológico`);
-      const cuerpo = encodeURIComponent(
-        `Hola ${nombre},\n\n` +
-        `Te invitamos a acceder al sistema de gestión del consultorio.\n\n` +
-        `Hacé click en el siguiente enlace para ingresar directamente:\n${link}\n\n` +
-        `Este link es de uso personal e intransferible.\n\n` +
-        `Saludos.`
-      );
-      window.open(`mailto:${email}?subject=${asunto}&body=${cuerpo}`, "_blank");
+      const asunto = `Acceso al sistema de gestión — Consultorio Odontológico`;
+      const cuerpo = `Hola ${nombre},
+
+Te damos la bienvenida al sistema de gestión del consultorio.
+
+Para ingresar por primera vez, hacé clic en el siguiente enlace:
+
+${link}
+
+Este link es personal, de un solo uso y tiene una validez de 1 hora.
+Una vez dentro vas a poder configurar tu contraseña desde tu perfil.
+
+Si tenés alguna duda, respondé este correo o consultá con el administrador.
+
+¡Bienvenido/a al equipo!
+Consultorio Odontológico`;
+
+      const url = `https://mail.google.com/mail/?view=cm&fs=1` +
+        `&to=${encodeURIComponent(email)}` +
+        `&su=${encodeURIComponent(asunto)}` +
+        `&body=${encodeURIComponent(cuerpo)}`;
+      window.open(url, "_blank");
       toast.success(`Invitación generada para ${nombre}`);
     },
     onError: (e: Error) => toast.error(e.message),

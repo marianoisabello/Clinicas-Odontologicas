@@ -656,39 +656,49 @@ function EnviarFacturaDialog({ factura, onClose }: { factura: FacturaCliente; on
     },
   });
 
-  const comprobante = [factura.tipo_factura, factura.numero_comprobante].filter(Boolean).join(" ");
-  const asunto = `Factura ${comprobante} — ${factura.concepto ?? factura.paciente_nombre}`;
-  const cuerpo = [
-    `Estimado/a ${factura.paciente_nombre},`,
-    ``,
-    `Le hacemos llegar el detalle de su factura:`,
-    ``,
-    `  Comprobante: ${comprobante || "—"}`,
-    `  Concepto:    ${factura.concepto ?? "—"}`,
-    `  Fecha:       ${factura.fecha}`,
-    factura.fecha_vencimiento ? `  Vencimiento: ${factura.fecha_vencimiento}` : "",
-    `  Total:       ${fmt(Number(factura.monto))} ${factura.moneda}`,
-    ``,
-    `Ante cualquier consulta no dude en comunicarse.`,
-    `Saludos cordiales.`,
-  ].filter((l) => l !== undefined).join("\n");
+  const comprobante  = [factura.tipo_factura, factura.numero_comprobante].filter(Boolean).join(" ");
+  const consultorio  = config?.nombre_consultorio ?? "Consultorio Odontológico";
+  const telConsult   = config?.telefono ?? "";
 
-  const mensajeWsp = [
-    `Hola ${factura.paciente_nombre} 👋`,
-    `Le enviamos el detalle de su factura:`,
-    ``,
-    `📄 *${comprobante || "Factura"}*`,
-    factura.concepto ? `📝 ${factura.concepto}` : "",
-    `📅 Fecha: ${factura.fecha}`,
-    factura.fecha_vencimiento ? `⏰ Vence: ${factura.fecha_vencimiento}` : "",
-    `💰 Total: ${fmt(Number(factura.monto))} ${factura.moneda}`,
-    ``,
-    `Ante cualquier consulta estamos a disposición.`,
-  ].filter(Boolean).join("\n");
+  const asunto = `Comprobante ${comprobante || "de pago"} — ${consultorio}`;
+
+  const cuerpo = `Estimado/a ${factura.paciente_nombre}:
+
+Nos comunicamos desde ${consultorio} para hacerle llegar el comprobante correspondiente a su atención.
+
+──────────────────────────────
+DETALLE DE FACTURA
+──────────────────────────────
+Comprobante : ${comprobante || "—"}
+Concepto    : ${factura.concepto ?? "Servicios odontológicos"}
+Fecha       : ${factura.fecha}${factura.fecha_vencimiento ? `\nVencimiento : ${factura.fecha_vencimiento}` : ""}
+Total       : ${fmt(Number(factura.monto))} ${factura.moneda}
+Estado      : ${factura.estado.charAt(0).toUpperCase() + factura.estado.slice(1)}
+──────────────────────────────
+${factura.notas ? `\nObservaciones: ${factura.notas}\n` : ""}
+Ante cualquier consulta no dude en comunicarse${telConsult ? ` al ${telConsult}` : ""}.
+
+Muchas gracias por elegirnos.
+${consultorio}`;
+
+  const mensajeWsp = `Hola ${factura.paciente_nombre} 👋
+
+Le enviamos desde *${consultorio}* el detalle de su comprobante:
+
+📄 *${comprobante || "Comprobante"}*
+📝 ${factura.concepto ?? "Servicios odontológicos"}
+📅 Fecha: ${factura.fecha}${factura.fecha_vencimiento ? `\n⏰ Vence: ${factura.fecha_vencimiento}` : ""}
+💰 *Total: ${fmt(Number(factura.monto))} ${factura.moneda}*
+${factura.notas ? `\n📌 ${factura.notas}` : ""}
+Ante cualquier consulta estamos a disposición${telConsult ? ` — ${telConsult}` : ""}.
+¡Gracias por confiar en nosotros! 🦷`;
 
   function abrirEmail() {
     if (!email) { toast.error("Ingresá un email"); return; }
-    const url = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    const url = `https://mail.google.com/mail/?view=cm&fs=1` +
+      `&to=${encodeURIComponent(email)}` +
+      `&su=${encodeURIComponent(asunto)}` +
+      `&body=${encodeURIComponent(cuerpo)}`;
     window.open(url, "_blank");
   }
 
