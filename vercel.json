@@ -7,6 +7,10 @@
       "destination": "/api/auth-google-callback"
     },
     {
+      "source": "/auth/google/start",
+      "destination": "/api/backend"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
