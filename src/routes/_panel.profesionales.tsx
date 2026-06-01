@@ -192,14 +192,18 @@ function ProfesionalesPage() {
       const asunto = `Acceso al sistema de gestión — Consultorio Odontológico`;
       const cuerpo = `Hola ${nombre},
 
-Te damos la bienvenida al sistema de gestión del consultorio.
+Te damos la bienvenida al sistema de gestión del Consultorio Odontológico.
 
-Para ingresar por primera vez, hacé clic en el siguiente enlace:
+Para ingresar, hacé clic en el siguiente enlace:
 
 ${link}
 
-Este link es personal, de un solo uso y tiene una validez de 1 hora.
-Una vez dentro vas a poder configurar tu contraseña desde tu perfil.
+──────────────────────────────
+PRINCIPALES FUNCIONES DEL SISTEMA
+──────────────────────────────
+• Gestión de turnos y calendario: agendá y organizá citas de pacientes con vista diaria, semanal y mensual.
+• Historial y tratamientos: accedé a la ficha de cada paciente, sus tratamientos realizados y la facturación asociada.
+• Administración financiera: registrá cuentas a pagar, generá facturas a clientes y enviálas por email o WhatsApp con link de pago.
 
 Si tenés alguna duda, respondé este correo o consultá con el administrador.
 

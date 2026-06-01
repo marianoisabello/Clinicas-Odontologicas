@@ -91,7 +91,7 @@ rutaAdmin.post('/profesionales/:id/invitar', requireAdmin, async (req, res) => {
     return res.status(400).json({ error: 'El profesional no tiene email registrado' });
   }
 
-  const frontendUrl = process.env.FRONTEND_URL || 'https://clinicas-odontologicas-git-main-pampai.vercel.app';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://clinicas-odontologicas.vercel.app';
 
   const { data, error } = await supabase.auth.admin.generateLink({
     type: 'magiclink',
