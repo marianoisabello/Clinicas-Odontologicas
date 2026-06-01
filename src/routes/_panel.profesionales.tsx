@@ -17,7 +17,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, UserX, UserCheck } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_panel/profesionales")({
@@ -177,6 +177,32 @@ function ProfesionalesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const invitar = useMutation({
+    mutationFn: async (id: string) => {
+      const token = await getToken();
+      const res = await fetch(`${backendUrl}/admin/profesionales/${id}/invitar`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Error al generar invitación");
+      return json as { nombre: string; email: string; link: string };
+    },
+    onSuccess: ({ nombre, email, link }) => {
+      const asunto = encodeURIComponent(`Acceso al sistema — Consultorio Odontológico`);
+      const cuerpo = encodeURIComponent(
+        `Hola ${nombre},\n\n` +
+        `Te invitamos a acceder al sistema de gestión del consultorio.\n\n` +
+        `Hacé click en el siguiente enlace para ingresar directamente:\n${link}\n\n` +
+        `Este link es de uso personal e intransferible.\n\n` +
+        `Saludos.`
+      );
+      window.open(`mailto:${email}?subject=${asunto}&body=${cuerpo}`, "_blank");
+      toast.success(`Invitación generada para ${nombre}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   function abrirCrear() {
     setEditando(null);
     setForm(FORM_VACIO);
@@ -329,6 +355,15 @@ function ProfesionalesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Enviar invitación por email"
+                          onClick={() => invitar.mutate(p.id)}
+                          disabled={invitar.isPending || !p.email}
+                        >
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => abrirEditar(p)}>
                           <Pencil className="h-4 w-4" />
                         </Button>

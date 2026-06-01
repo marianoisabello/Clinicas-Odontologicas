@@ -74,6 +74,40 @@ rutaAdmin.put('/profesionales/:id', requireAdmin, async (req, res) => {
   res.json(data);
 });
 
+// POST /admin/profesionales/:id/invitar — genera magic link y devuelve datos para el mail
+rutaAdmin.post('/profesionales/:id/invitar', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('nombre, email')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    return res.status(404).json({ error: 'Profesional no encontrado' });
+  }
+  if (!profile.email) {
+    return res.status(400).json({ error: 'El profesional no tiene email registrado' });
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL || 'https://clinicas-odontologicas.vercel.app';
+
+  const { data, error } = await supabase.auth.admin.generateLink({
+    type: 'magiclink',
+    email: profile.email,
+    options: { redirectTo: `${frontendUrl}/dashboard` },
+  });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({
+    nombre: profile.nombre,
+    email: profile.email,
+    link: data.properties.action_link,
+  });
+});
+
 // DELETE /admin/profesionales/:id — desactiva (no elimina datos)
 rutaAdmin.delete('/profesionales/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
