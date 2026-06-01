@@ -173,7 +173,7 @@ function ProfileCard({ profile, onUpdated }: { profile: Record<string, unknown>;
 
 function GoogleCalendarCard({ profile }: { profile: Record<string, unknown> }) {
   const qc = useQueryClient();
-  const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "https://consultorio-backend-eight.vercel.app";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "";
   const profesionalId = profile.id as string;
 
   // Consultar si el profesional tiene Google Calendar conectado
