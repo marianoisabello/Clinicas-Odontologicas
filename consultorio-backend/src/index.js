@@ -54,6 +54,11 @@ app.use('/admin', async (req, res, next) => {
   rutaAdmin(req, res, next);
 });
 
+app.use('/pagos', async (req, res, next) => {
+  const { rutaPagos } = await import('./routes/pagos.js');
+  rutaPagos(req, res, next);
+});
+
 /**
  * Webhook de Meta WhatsApp - Verificacion (GET)
  */

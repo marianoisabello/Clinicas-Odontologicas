@@ -25,13 +25,20 @@ import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Pencil, Trash2, MoreHorizontal, TrendingUp, TrendingDown, Wallet, Mail, MessageCircle, FileText, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Pencil, Trash2, MoreHorizontal, TrendingUp, TrendingDown, Wallet, Mail, MessageCircle, FileText, Check, ChevronsUpDown, CreditCard, Copy, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_panel/administracion")({
   component: AdministracionPage,
 });
+
+const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "";
+
+async function getToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? "";
+}
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -630,6 +637,8 @@ function CuentasACobrar() {
 function EnviarFacturaDialog({ factura, onClose }: { factura: FacturaCliente; onClose: () => void }) {
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [mpUrl, setMpUrl] = useState<string | null>(null);
+  const [mpLoading, setMpLoading] = useState(false);
 
   // Config del consultorio para el PDF
   const { data: config } = useQuery({
@@ -693,19 +702,49 @@ ${factura.notas ? `\n📌 ${factura.notas}` : ""}
 Ante cualquier consulta estamos a disposición${telConsult ? ` — ${telConsult}` : ""}.
 ¡Gracias por confiar en nosotros! 🦷`;
 
+  async function generarLinkMP() {
+    setMpLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${backendUrl}/pagos/crear-link`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ factura_id: factura.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Error al generar link");
+      setMpUrl(json.url);
+      if (json.sandbox) toast.info("Modo sandbox activo — usá credenciales de prueba de MP");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al generar link de MP");
+    } finally {
+      setMpLoading(false);
+    }
+  }
+
+  function copiarLink() {
+    if (!mpUrl) return;
+    navigator.clipboard.writeText(mpUrl);
+    toast.success("Link copiado al portapapeles");
+  }
+
+  // Cuerpo del email con link MP si está disponible
+  const cuerpoEmail = cuerpo + (mpUrl ? `\n\n──────────────────────────────\nPAGO EN LÍNEA\n──────────────────────────────\nPodés abonar de forma segura a través de Mercado Pago:\n${mpUrl}\n` : "");
+  const mensajeWspFinal = mensajeWsp + (mpUrl ? `\n\n💳 *Pagá online con Mercado Pago:*\n${mpUrl}` : "");
+
   function abrirEmail() {
     if (!email) { toast.error("Ingresá un email"); return; }
     const url = `https://mail.google.com/mail/?view=cm&fs=1` +
       `&to=${encodeURIComponent(email)}` +
       `&su=${encodeURIComponent(asunto)}` +
-      `&body=${encodeURIComponent(cuerpo)}`;
+      `&body=${encodeURIComponent(cuerpoEmail)}`;
     window.open(url, "_blank");
   }
 
   function abrirWhatsApp() {
     if (!telefono) { toast.error("Ingresá un teléfono"); return; }
     const numero = telefono.replace(/\D/g, "");
-    const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensajeWsp)}`;
+    const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensajeWspFinal)}`;
     window.open(url, "_blank");
   }
 
@@ -750,6 +789,36 @@ Ante cualquier consulta estamos a disposición${telConsult ? ` — ${telConsult}
             </div>
           </div>
 
+          <div className="border-t pt-4 space-y-2">
+            <p className="text-sm font-medium">Link de pago — Mercado Pago</p>
+            {!mpUrl ? (
+              <Button
+                variant="outline"
+                className="w-full border-[#009ee3] text-[#009ee3] hover:bg-[#009ee3]/10"
+                onClick={generarLinkMP}
+                disabled={mpLoading}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                {mpLoading ? "Generando..." : "Generar link de pago"}
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-md border bg-muted px-3 py-2">
+                  <span className="flex-1 truncate text-xs text-muted-foreground">{mpUrl}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={copiarLink} title="Copiar link">
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => window.open(mpUrl, "_blank")} title="Abrir en MP">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  El link se incluye automáticamente en el email y WhatsApp.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="border-t pt-4">
             <p className="text-sm font-medium mb-2">Generar PDF</p>
             <Button
@@ -766,7 +835,7 @@ Ante cualquier consulta estamos a disposición${telConsult ? ` — ${telConsult}
           </div>
 
           <p className="text-xs text-muted-foreground">
-            El email y WhatsApp abren tu cliente local con el mensaje prellenado.
+            El email y WhatsApp abren Gmail/WhatsApp Web con el mensaje prellenado.
           </p>
         </div>
         <DialogFooter>
