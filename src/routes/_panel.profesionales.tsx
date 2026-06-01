@@ -17,7 +17,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, UserX } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_panel/profesionales")({
@@ -155,6 +155,23 @@ function ProfesionalesPage() {
     },
     onSuccess: () => {
       toast.success("Profesional desactivado");
+      qc.invalidateQueries({ queryKey: ["admin-profesionales"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const activar = useMutation({
+    mutationFn: async (id: string) => {
+      const token = await getToken();
+      const res = await fetch(`${backendUrl}/admin/profesionales/${id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: true }),
+      });
+      if (!res.ok) throw new Error("Error al activar");
+    },
+    onSuccess: () => {
+      toast.success("Profesional activado");
       qc.invalidateQueries({ queryKey: ["admin-profesionales"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -315,7 +332,7 @@ function ProfesionalesPage() {
                         <Button variant="ghost" size="icon" onClick={() => abrirEditar(p)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        {p.activo && (
+                        {p.activo ? (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -324,6 +341,16 @@ function ProfesionalesPage() {
                             disabled={desactivar.isPending}
                           >
                             <UserX className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-green-600 hover:text-green-700"
+                            onClick={() => activar.mutate(p.id)}
+                            disabled={activar.isPending}
+                          >
+                            <UserCheck className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
