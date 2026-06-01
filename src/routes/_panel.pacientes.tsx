@@ -13,8 +13,15 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
-import { Plus, Search, Eye } from "lucide-react";
+import { Plus, Search, Eye, Sheet } from "lucide-react";
 import { toast } from "sonner";
+
+const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "";
+
+async function getToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? "";
+}
 
 export const Route = createFileRoute("/_panel/pacientes")({
   component: PacientesPage,
@@ -39,6 +46,25 @@ function PacientesPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
   const PAGE = 20;
+
+  const exportarSheet = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`${backendUrl}/auth/google/exportar-pacientes`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Error al exportar");
+      return json as { url: string; total: number };
+    },
+    onSuccess: ({ url, total }) => {
+      toast.success(`Sheet creado con ${total} pacientes`, {
+        action: { label: "Abrir", onClick: () => window.open(url, "_blank") },
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const { data: pacientes = [], isLoading } = useQuery({
     queryKey: ["pacientes-list", search, page],
@@ -75,10 +101,15 @@ function PacientesPage() {
           <h1 className="text-3xl font-bold">Pacientes</h1>
           <p className="text-muted-foreground">Gestión de pacientes</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Nuevo paciente</Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => exportarSheet.mutate()} disabled={exportarSheet.isPending}>
+            <Sheet className="mr-2 h-4 w-4" />
+            {exportarSheet.isPending ? "Exportando..." : "Exportar Sheet"}
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" /> Nuevo paciente</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Nuevo paciente</DialogTitle></DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="grid gap-4 sm:grid-cols-2">
@@ -99,7 +130,8 @@ function PacientesPage() {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="p-4">

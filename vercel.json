@@ -5,7 +5,7 @@
     { "source": "/admin/:path*",           "destination": "/api/backend" },
     { "source": "/webhook/:path*",         "destination": "/api/backend" },
     { "source": "/test/:path*",            "destination": "/api/backend" },
-    { "source": "/auth/google/disconnect", "destination": "/api/backend" },
+    { "source": "/auth/google/:path*",     "destination": "/api/backend" },
     { "source": "/health",                 "destination": "/api/backend" },
     { "source": "/((?!api/).*)",           "destination": "/index.html" }
   ]

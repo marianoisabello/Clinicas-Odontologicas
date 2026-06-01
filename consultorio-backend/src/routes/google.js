@@ -9,8 +9,43 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { getAuthUrl, exchangeCode, encryptToken } from '../services/google/oauth.js';
+import { requireAuth } from '../middleware/auth.js';
 
 export const rutaGoogle = Router();
+
+// ---------------------------------------------------------------------------
+// GET /auth/google/status
+// Devuelve el estado de conexión de Google del usuario autenticado.
+// ---------------------------------------------------------------------------
+rutaGoogle.get('/status', requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from('google_calendar_credentials')
+    .select('google_email, connected_at')
+    .eq('profesional_id', req.user.id)
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json(data ? { conectado: true, google_email: data.google_email, connected_at: data.connected_at } : { conectado: false });
+});
+
+// ---------------------------------------------------------------------------
+// POST /auth/google/exportar-pacientes
+// Crea un Google Sheet con todos los pacientes. Usa las credenciales del usuario.
+// ---------------------------------------------------------------------------
+rutaGoogle.post('/exportar-pacientes', requireAuth, async (req, res) => {
+  try {
+    const { exportarPacientesASheet } = await import('../services/google/sheets.js');
+    const resultado = await exportarPacientesASheet(req.user.id);
+    res.json(resultado);
+  } catch (err) {
+    console.error('[Google Sheets] Error exportando pacientes:', err.message);
+    if (err.message.includes('No hay credenciales')) {
+      return res.status(400).json({ error: 'Primero conectá tu cuenta de Google en Configuración → Integraciones.' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // GET /auth/google/start?profesional_id=xxx

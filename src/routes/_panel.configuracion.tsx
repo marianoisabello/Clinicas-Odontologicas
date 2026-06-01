@@ -177,16 +177,18 @@ function GoogleCalendarCard({ profile }: { profile: Record<string, unknown> }) {
   const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "";
   const profesionalId = profile.id as string;
 
-  // Consultar si el profesional tiene Google Calendar conectado
+  // Consultar estado de conexión Google via backend (evita bloqueos de RLS)
   const { data: gcCreds, isLoading } = useQuery({
     queryKey: ["google-cal-creds", profesionalId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("google_calendar_credentials")
-        .select("google_email, connected_at")
-        .eq("profesional_id", profesionalId)
-        .maybeSingle();
-      return data;
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token ?? "";
+      const res = await fetch(`${backendUrl}/auth/google/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.conectado ? json : null;
     },
   });
 
