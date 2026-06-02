@@ -60,6 +60,33 @@ app.use('/pagos', async (req, res, next) => {
 });
 
 /**
+ * Webhook de Whapi — recibe mensajes entrantes
+ */
+app.post('/webhook/whapi', async (req, res) => {
+  // Verificar token opcional
+  const whapiToken = process.env.WHAPI_WEBHOOK_TOKEN;
+  if (whapiToken) {
+    const tokenHeader = req.headers['x-whapi-token'];
+    if (tokenHeader !== whapiToken) {
+      return res.sendStatus(401);
+    }
+  }
+
+  res.sendStatus(200);
+
+  const { extraerMensajesWhapi } = await import('./lib/whapi.js');
+  const mensajes = extraerMensajesWhapi(req.body);
+
+  for (const { telefono, mensaje } of mensajes) {
+    try {
+      await manejarMensajeEntrante(telefono, mensaje, 'whapi');
+    } catch (err) {
+      console.error('Error procesando mensaje Whapi:', err);
+    }
+  }
+});
+
+/**
  * Webhook de Meta WhatsApp - Verificacion (GET)
  */
 app.get('/webhook/whatsapp', async (req, res) => {
@@ -116,12 +143,14 @@ async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
     { procesarMensaje },
     { enviarWhatsApp },
     { enviarWhatsAppMeta },
+    { enviarWhatsAppWhapi },
   ] = await Promise.all([
     import('./services/pacientes.js'),
     import('./services/conversaciones.js'),
     import('./agent/index.js'),
     import('./lib/twilio.js'),
     import('./lib/meta-whatsapp.js'),
+    import('./lib/whapi.js'),
   ]);
 
   let paciente = await buscarPorTelefono(telefono);
@@ -152,7 +181,9 @@ async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
   });
 
   let envio;
-  if (provider === 'meta' || usarMeta()) {
+  if (provider === 'whapi') {
+    envio = await enviarWhatsAppWhapi(telefono, respuesta);
+  } else if (provider === 'meta' || usarMeta()) {
     envio = await enviarWhatsAppMeta(telefono, respuesta);
   } else {
     envio = await enviarWhatsApp(telefono, respuesta);
