@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, UserPlus, MessageCircle, Mail, ArrowRight } from "lucide-react";
+import { Calendar, UserPlus, MessageCircle, Mail, ArrowRight, CalendarCheck, FileSpreadsheet, CreditCard, Zap } from "lucide-react";
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth } from "date-fns";
 import { fmtTime, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -120,6 +120,52 @@ function Dashboard() {
           </Link>
         ))}
       </div>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Zap className="h-4 w-4 text-primary" />
+            Funcionalidades del sistema
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <CalendarCheck className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Sincronización Google</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Conectá tu cuenta Google para sincronizar turnos con Google Calendar y exportar pacientes a Google Sheets desde el menú Configuración.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                <FileSpreadsheet className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Recepción automática de facturas</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Un agente de Google Apps Script lee tus mails de facturas de proveedores y las sincroniza automáticamente en Administración → Cuentas a Pagar.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#009ee3]/10 text-[#009ee3]">
+                <CreditCard className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Link de pago con Mercado Pago</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Al generar una factura a cliente podés crear un link de pago de Mercado Pago e incluirlo automáticamente en el email y WhatsApp del paciente.
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
