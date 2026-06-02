@@ -136,27 +136,25 @@ app.post('/webhook/whatsapp', async (req, res) => {
 });
 
 async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
-  // Lazy load de todos los modulos necesarios
   const [
-    { buscarPorTelefono, crearPacientePreliminar },
-    { obtenerOCrearConversacion, guardarMensaje, obtenerHistorialReciente, iaEstaActiva },
-    { procesarMensaje },
+    { obtenerOCrearConversacion, guardarMensaje, obtenerHistorialReciente },
+    { procesarMenuBot },
     { enviarWhatsApp },
     { enviarWhatsAppMeta },
     { enviarWhatsAppWhapi },
   ] = await Promise.all([
-    import('./services/pacientes.js'),
     import('./services/conversaciones.js'),
-    import('./agent/index.js'),
+    import('./services/bot-menu.js'),
     import('./lib/twilio.js'),
     import('./lib/meta-whatsapp.js'),
     import('./lib/whapi.js'),
   ]);
 
-  let paciente = await buscarPorTelefono(telefono);
-  if (!paciente) paciente = await crearPacientePreliminar(telefono);
-
-  const conversacion = await obtenerOCrearConversacion(telefono, paciente.id);
+  const conversacion = await obtenerOCrearConversacion(telefono);
+  if (!conversacion) {
+    console.error('No se pudo crear conversación para', telefono);
+    return;
+  }
 
   await guardarMensaje({
     conversacionId: conversacion.id,
@@ -164,37 +162,55 @@ async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
     contenido: mensaje,
   });
 
-  const iaActiva = await iaEstaActiva(conversacion.id);
-  if (!iaActiva) {
-    console.log(`IA pausada en conversación ${conversacion.id}`);
-    return;
+  const { respuesta: respuestaMenu, usarIA, contexto } = await procesarMenuBot(conversacion.id, mensaje);
+
+  let respuestaFinal = respuestaMenu;
+
+  if (usarIA) {
+    try {
+      const [
+        { buscarPorTelefono, crearPacientePreliminar },
+        { procesarMensaje },
+      ] = await Promise.all([
+        import('./services/pacientes.js'),
+        import('./agent/index.js'),
+      ]);
+
+      let paciente = await buscarPorTelefono(telefono);
+      if (!paciente) paciente = await crearPacientePreliminar(telefono);
+
+      const historial = await obtenerHistorialReciente(conversacion.id, 20);
+
+      respuestaFinal = await procesarMensaje({
+        paciente,
+        conversacionId: conversacion.id,
+        mensajeUsuario: mensaje,
+        historial: historial.slice(0, -1),
+        contexto,
+      });
+    } catch (err) {
+      console.error('Error en agente IA:', err);
+      respuestaFinal = 'En este momento no puedo procesar tu solicitud. Por favor, intentá más tarde.';
+    }
   }
 
-  const historial = await obtenerHistorialReciente(conversacion.id, 20);
-  const historialPrev = historial.slice(0, -1);
-
-  const respuesta = await procesarMensaje({
-    paciente,
-    conversacionId: conversacion.id,
-    mensajeUsuario: mensaje,
-    historial: historialPrev,
-  });
+  if (!respuestaFinal) return;
 
   let envio;
   if (provider === 'whapi') {
-    envio = await enviarWhatsAppWhapi(telefono, respuesta);
+    envio = await enviarWhatsAppWhapi(telefono, respuestaFinal);
   } else if (provider === 'meta' || usarMeta()) {
-    envio = await enviarWhatsAppMeta(telefono, respuesta);
+    envio = await enviarWhatsAppMeta(telefono, respuestaFinal);
   } else {
-    envio = await enviarWhatsApp(telefono, respuesta);
+    envio = await enviarWhatsApp(telefono, respuestaFinal);
   }
 
-  if (envio.ok) {
+  if (envio?.ok) {
     await guardarMensaje({
       conversacionId: conversacion.id,
       direccion: 'saliente',
-      contenido: respuesta,
-      procesadoPorIA: true,
+      contenido: respuestaFinal,
+      procesadoPorIA: usarIA,
     });
   }
 }
