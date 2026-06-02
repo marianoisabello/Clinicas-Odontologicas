@@ -750,7 +750,7 @@ Ante cualquier consulta estamos a disposición${telConsult ? ` — ${telConsult}
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[560px]">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Enviar factura — {factura.paciente_nombre}</DialogTitle>
         </DialogHeader>
