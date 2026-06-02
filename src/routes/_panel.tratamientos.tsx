@@ -38,6 +38,13 @@ export const Route = createFileRoute("/_panel/tratamientos")({
   component: TratamientosPage,
 });
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL ?? "";
+
+async function getToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? "";
+}
+
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
 const ICONOS = ["Stethoscope","Sparkles","Sun","Syringe","Scissors","Smile","Anchor","AlertCircle","Heart","Star","Activity"];
@@ -414,14 +421,35 @@ function AsignacionDialog({ onClose }: { onClose: () => void }) {
 
       if (aError) throw aError;
 
-      return { paciente, factura, pacienteNombre };
+      // Intentar generar link de pago MP (silencioso si no está configurado)
+      let mpUrl: string | null = null;
+      try {
+        const token = await getToken();
+        const mpRes = await fetch(`${backendUrl}/pagos/crear-link`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ factura_id: factura.id }),
+        });
+        if (mpRes.ok) {
+          const mpJson = await mpRes.json();
+          mpUrl = mpJson.url ?? null;
+        }
+      } catch {
+        // MP no configurado, continuar sin link
+      }
+
+      return { paciente, factura, pacienteNombre, mpUrl };
     },
 
-    onSuccess: ({ paciente, factura, pacienteNombre }) => {
+    onSuccess: ({ paciente, factura, pacienteNombre, mpUrl }) => {
       const consultorio = config?.nombre_consultorio ?? "Consultorio Odontológico";
       const telConsult  = config?.telefono ?? "";
       const comprobante = `B ${factura.numero_comprobante ?? ""}`.trim();
       const monto       = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(Number(factura.monto));
+
+      const seccionMP = mpUrl
+        ? `\n──────────────────────────────\nPAGO EN LÍNEA\n──────────────────────────────\nPodés abonar de forma segura a través de Mercado Pago:\n${mpUrl}\n`
+        : "";
 
       const asunto = `Comprobante de atención — ${consultorio}`;
       const cuerpo = `Estimado/a ${pacienteNombre}:
@@ -435,7 +463,7 @@ Tratamiento : ${form.tratamiento_nombre}
 Fecha       : ${form.fecha}
 Total       : ${monto} ARS
 ──────────────────────────────
-${form.notas ? `\nObservaciones: ${form.notas}\n` : ""}
+${form.notas ? `\nObservaciones: ${form.notas}\n` : ""}${seccionMP}
 Ante cualquier consulta no dude en comunicarse${telConsult ? ` al ${telConsult}` : ""}.
 
 Muchas gracias por elegirnos.
@@ -448,7 +476,7 @@ Le enviamos desde *${consultorio}* el resumen de su atención:
 🦷 *${form.tratamiento_nombre}*
 📅 Fecha: ${form.fecha}
 💰 *Total: ${monto} ARS*
-${form.notas ? `\n📌 ${form.notas}` : ""}
+${form.notas ? `\n📌 ${form.notas}` : ""}${mpUrl ? `\n\n💳 *Pagá online con Mercado Pago:*\n${mpUrl}` : ""}
 Ante cualquier consulta estamos a disposición${telConsult ? ` — ${telConsult}` : ""}.
 ¡Gracias por elegirnos! 😊`;
 
