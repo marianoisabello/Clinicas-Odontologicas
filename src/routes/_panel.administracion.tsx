@@ -750,7 +750,7 @@ Ante cualquier consulta estamos a disposición${telConsult ? ` — ${telConsult}
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[440px]">
+      <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>Enviar factura — {factura.paciente_nombre}</DialogTitle>
         </DialogHeader>
@@ -803,14 +803,16 @@ Ante cualquier consulta estamos a disposición${telConsult ? ` — ${telConsult}
               </Button>
             ) : (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 rounded-md border bg-muted px-3 py-2">
-                  <span className="flex-1 truncate text-xs text-muted-foreground">{mpUrl}</span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={copiarLink} title="Copiar link">
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => window.open(mpUrl, "_blank")} title="Abrir en MP">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
+                <div className="rounded-md border bg-muted p-3 space-y-2">
+                  <p className="break-all text-xs text-muted-foreground leading-relaxed">{mpUrl}</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={copiarLink}>
+                      <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar link
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1 border-[#009ee3] text-[#009ee3] hover:bg-[#009ee3]/10" onClick={() => window.open(mpUrl!, "_blank")}>
+                      <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Abrir en MP
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   El link se incluye automáticamente en el email y WhatsApp.
