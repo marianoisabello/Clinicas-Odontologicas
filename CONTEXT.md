@@ -44,8 +44,13 @@ Odontologia/
 ✅ Integración Mercado Pago (sandbox): genera link de pago por preferencia, incluido en email y WhatsApp
 ✅ Webhook MP: marca factura como cobrada al recibir pago aprobado
 ✅ Dashboard con card de funcionalidades (Google, Apps Script, MP)
+✅ Bot de menú WhatsApp: bienvenida → servicios → profesionales → agenda (IA solo en último paso)
+✅ Trigger phrase: bot solo se activa si primer mensaje = `BOT_TRIGGER_PHRASE` (var Vercel)
+✅ Soporte Whapi como provider WhatsApp (lib/whapi.js) — descartado por limitaciones de plan
+✅ Columnas `bot_estado` y `bot_contexto` agregadas a `conversaciones_whatsapp`
 ⚠️ Supabase Site URL debe estar en `https://clinicas-odontologicas.vercel.app` (no localhost)
-⚠️ Chatbot IA de WhatsApp pendiente de remover (próxima sesión)
+⚠️ WhatsApp no funciona en producción aún — pendiente conectar provider definitivo
+⚠️ Meta Business en revisión — no disponible por ahora
 
 ## Supabase
 
@@ -233,8 +238,8 @@ MP_ACCESS_TOKEN=TEST-...
 
 ## Próximos pasos
 
-1. **Remover chatbot IA de WhatsApp** — mantener solo recepción de mensajes sin respuesta automática
-2. Conectar WhatsApp Business real (webhook: `https://clinicas-odontologicas.vercel.app/webhook/whatsapp`)
+1. **Conectar Twilio WhatsApp** — comprar número en Twilio (~$1.15/mes), configurar webhook en `/webhook/whatsapp`, agregar vars `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` en Vercel
+2. Cuando Meta apruebe el negocio: migrar a Meta Cloud API (código ya listo en `lib/meta-whatsapp.js`)
 3. MP producción: cambiar `MP_ACCESS_TOKEN` por token real cuando esté listo
 4. Job cron de recordatorios de turnos (`node-cron` no funciona en Vercel serverless — usar cron externo)
 
