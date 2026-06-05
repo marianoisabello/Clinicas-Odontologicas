@@ -96,14 +96,9 @@ app.post('/webhook/whapi', async (req, res) => {
  * UltraMsg envía un token de seguridad en el body que hay que validar
  */
 app.post('/webhook/ultramsg', async (req, res) => {
-  const token = process.env.ULTRAMSG_TOKEN;
-  if (token && req.body.token !== token) {
-    console.warn('[UltraMsg webhook] token inválido');
-    return res.sendStatus(403);
-  }
-
   res.sendStatus(200);
 
+  console.log('[UltraMsg webhook] headers:', JSON.stringify(req.headers));
   console.log('[UltraMsg webhook] body:', JSON.stringify(req.body));
 
   const { extraerMensajesUltraMsg } = await import('./lib/ultramsg.js');
