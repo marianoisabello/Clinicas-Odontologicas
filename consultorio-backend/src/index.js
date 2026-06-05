@@ -65,18 +65,33 @@ app.use('/pagos', async (req, res, next) => {
  * Webhook de Whapi — recibe mensajes entrantes
  */
 app.post('/webhook/whapi', async (req, res) => {
-  // Verificar token opcional
-  const whapiToken = process.env.WHAPI_WEBHOOK_TOKEN;
-  if (whapiToken) {
-    const tokenHeader = req.headers['x-whapi-token'];
-    if (tokenHeader !== whapiToken) {
-      return res.sendStatus(401);
-    }
-  }
-
   res.sendStatus(200);
 
-  console.log('[Whapi webhook] body:', JSON.stringify(req.body));
+  console.log('[webhook/whapi] body:', JSON.stringify(req.body));
+
+  // UltraMsg manda event_type en el body — Whapi manda messages[]
+  const esUltraMsg = !!req.body.event_type;
+
+  if (esUltraMsg) {
+    const { extraerMensajesUltraMsg } = await import('./lib/ultramsg.js');
+    const mensajes = extraerMensajesUltraMsg(req.body);
+    console.log('[UltraMsg via /whapi] mensajes extraídos:', mensajes.length);
+    for (const { telefono, mensaje } of mensajes) {
+      try {
+        await manejarMensajeEntrante(telefono, mensaje, 'ultramsg');
+      } catch (err) {
+        console.error('[UltraMsg] Error procesando mensaje:', err);
+      }
+    }
+    return;
+  }
+
+  // Verificar token Whapi opcional
+  const whapiToken = process.env.WHAPI_WEBHOOK_TOKEN;
+  if (whapiToken && req.headers['x-whapi-token'] !== whapiToken) {
+    console.warn('[Whapi] token inválido');
+    return;
+  }
 
   const { extraerMensajesWhapi } = await import('./lib/whapi.js');
   const mensajes = extraerMensajesWhapi(req.body);
