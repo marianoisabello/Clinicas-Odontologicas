@@ -74,8 +74,11 @@ app.post('/webhook/whapi', async (req, res) => {
 
   res.sendStatus(200);
 
+  console.log('[Whapi webhook] body:', JSON.stringify(req.body));
+
   const { extraerMensajesWhapi } = await import('./lib/whapi.js');
   const mensajes = extraerMensajesWhapi(req.body);
+  console.log('[Whapi webhook] mensajes extraídos:', mensajes.length);
 
   for (const { telefono, mensaje } of mensajes) {
     try {
