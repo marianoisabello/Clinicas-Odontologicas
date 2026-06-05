@@ -23,6 +23,7 @@ import { Route as PanelDashboardRouteImport } from './routes/_panel.dashboard'
 import { Route as PanelConsultasRouteImport } from './routes/_panel.consultas'
 import { Route as PanelConfiguracionRouteImport } from './routes/_panel.configuracion'
 import { Route as PanelCalendarioRouteImport } from './routes/_panel.calendario'
+import { Route as PanelAdministracionRouteImport } from './routes/_panel.administracion'
 import { Route as PanelPacientesIdRouteImport } from './routes/_panel.pacientes.$id'
 
 const ServiciosRoute = ServiciosRouteImport.update({
@@ -94,6 +95,11 @@ const PanelCalendarioRoute = PanelCalendarioRouteImport.update({
   path: '/calendario',
   getParentRoute: () => PanelRoute,
 } as any)
+const PanelAdministracionRoute = PanelAdministracionRouteImport.update({
+  id: '/administracion',
+  path: '/administracion',
+  getParentRoute: () => PanelRoute,
+} as any)
 const PanelPacientesIdRoute = PanelPacientesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/servicios': typeof ServiciosRoute
+  '/administracion': typeof PanelAdministracionRoute
   '/calendario': typeof PanelCalendarioRoute
   '/configuracion': typeof PanelConfiguracionRoute
   '/consultas': typeof PanelConsultasRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/servicios': typeof ServiciosRoute
+  '/administracion': typeof PanelAdministracionRoute
   '/calendario': typeof PanelCalendarioRoute
   '/configuracion': typeof PanelConfiguracionRoute
   '/consultas': typeof PanelConsultasRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/nosotros': typeof NosotrosRoute
   '/servicios': typeof ServiciosRoute
+  '/_panel/administracion': typeof PanelAdministracionRoute
   '/_panel/calendario': typeof PanelCalendarioRoute
   '/_panel/configuracion': typeof PanelConfiguracionRoute
   '/_panel/consultas': typeof PanelConsultasRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nosotros'
     | '/servicios'
+    | '/administracion'
     | '/calendario'
     | '/configuracion'
     | '/consultas'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nosotros'
     | '/servicios'
+    | '/administracion'
     | '/calendario'
     | '/configuracion'
     | '/consultas'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nosotros'
     | '/servicios'
+    | '/_panel/administracion'
     | '/_panel/calendario'
     | '/_panel/configuracion'
     | '/_panel/consultas'
@@ -311,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelCalendarioRouteImport
       parentRoute: typeof PanelRoute
     }
+    '/_panel/administracion': {
+      id: '/_panel/administracion'
+      path: '/administracion'
+      fullPath: '/administracion'
+      preLoaderRoute: typeof PanelAdministracionRouteImport
+      parentRoute: typeof PanelRoute
+    }
     '/_panel/pacientes/$id': {
       id: '/_panel/pacientes/$id'
       path: '/$id'
@@ -334,6 +353,7 @@ const PanelPacientesRouteWithChildren = PanelPacientesRoute._addFileChildren(
 )
 
 interface PanelRouteChildren {
+  PanelAdministracionRoute: typeof PanelAdministracionRoute
   PanelCalendarioRoute: typeof PanelCalendarioRoute
   PanelConfiguracionRoute: typeof PanelConfiguracionRoute
   PanelConsultasRoute: typeof PanelConsultasRoute
@@ -345,6 +365,7 @@ interface PanelRouteChildren {
 }
 
 const PanelRouteChildren: PanelRouteChildren = {
+  PanelAdministracionRoute: PanelAdministracionRoute,
   PanelCalendarioRoute: PanelCalendarioRoute,
   PanelConfiguracionRoute: PanelConfiguracionRoute,
   PanelConsultasRoute: PanelConsultasRoute,

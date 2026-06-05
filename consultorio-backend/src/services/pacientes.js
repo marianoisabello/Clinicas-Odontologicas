@@ -23,6 +23,7 @@ export async function crearPacientePreliminar(telefono, nombre = null) {
     .single();
 
   if (error) {
+    console.error('Error creando paciente preliminar:', error.message, 'telefono:', normalizarTelefono(telefono));
     // Si ya existe (carrera), buscarlo
     return await buscarPorTelefono(telefono);
   }

@@ -150,6 +150,21 @@ async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
     import('./lib/whapi.js'),
   ]);
 
+  // Whitelist de prueba: si está definida, solo esos números activan el bot
+  const testNumbers = process.env.WHAPI_TEST_NUMBERS;
+  if (testNumbers) {
+    const permitidos = testNumbers.split(',').map(n => n.trim().replace('+', ''));
+    const telefonoLimpio = telefono.replace('+', '').replace('whatsapp:', '').trim();
+    if (!permitidos.includes(telefonoLimpio)) {
+      console.log(`Número ${telefono} no está en whitelist, mensaje guardado sin respuesta del bot`);
+      const conversacionSilenciosa = await obtenerOCrearConversacion(telefono);
+      if (conversacionSilenciosa) {
+        await guardarMensaje({ conversacionId: conversacionSilenciosa.id, direccion: 'entrante', contenido: mensaje });
+      }
+      return;
+    }
+  }
+
   const conversacion = await obtenerOCrearConversacion(telefono);
   if (!conversacion) {
     console.error('No se pudo crear conversación para', telefono);
