@@ -28,13 +28,14 @@ app.use(cors({
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// Determinar si usar Meta o Twilio
+// Determinar provider activo
 const usarMeta = () => !!process.env.META_ACCESS_TOKEN;
+const usarUltraMsg = () => !!(process.env.ULTRAMSG_INSTANCE_ID && process.env.ULTRAMSG_TOKEN);
 
 // Health check - sin dependencias
-app.get('/health', (req, res) => res.json({ 
-  ok: true, 
-  provider: usarMeta() ? 'meta' : 'twilio',
+app.get('/health', (req, res) => res.json({
+  ok: true,
+  provider: usarMeta() ? 'meta' : usarUltraMsg() ? 'ultramsg' : 'twilio',
   timestamp: new Date().toISOString()
 }));
 
@@ -58,6 +59,7 @@ app.use('/pagos', async (req, res, next) => {
   const { rutaPagos } = await import('./routes/pagos.js');
   rutaPagos(req, res, next);
 });
+
 
 /**
  * Webhook de Whapi — recibe mensajes entrantes
@@ -85,6 +87,34 @@ app.post('/webhook/whapi', async (req, res) => {
       await manejarMensajeEntrante(telefono, mensaje, 'whapi');
     } catch (err) {
       console.error('Error procesando mensaje Whapi:', err);
+    }
+  }
+});
+
+/**
+ * Webhook de UltraMsg — recibe mensajes entrantes
+ * UltraMsg envía un token de seguridad en el body que hay que validar
+ */
+app.post('/webhook/ultramsg', async (req, res) => {
+  const token = process.env.ULTRAMSG_TOKEN;
+  if (token && req.body.token !== token) {
+    console.warn('[UltraMsg webhook] token inválido');
+    return res.sendStatus(403);
+  }
+
+  res.sendStatus(200);
+
+  console.log('[UltraMsg webhook] body:', JSON.stringify(req.body));
+
+  const { extraerMensajesUltraMsg } = await import('./lib/ultramsg.js');
+  const mensajes = extraerMensajesUltraMsg(req.body);
+  console.log('[UltraMsg webhook] mensajes extraídos:', mensajes.length);
+
+  for (const { telefono, mensaje } of mensajes) {
+    try {
+      await manejarMensajeEntrante(telefono, mensaje, 'ultramsg');
+    } catch (err) {
+      console.error('[UltraMsg] Error procesando mensaje:', err);
     }
   }
 });
@@ -145,12 +175,14 @@ async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
     { enviarWhatsApp },
     { enviarWhatsAppMeta },
     { enviarWhatsAppWhapi },
+    { enviarWhatsAppUltraMsg },
   ] = await Promise.all([
     import('./services/conversaciones.js'),
     import('./services/bot-menu.js'),
     import('./lib/twilio.js'),
     import('./lib/meta-whatsapp.js'),
     import('./lib/whapi.js'),
+    import('./lib/ultramsg.js'),
   ]);
 
   // Whitelist de prueba: si está definida, solo esos números activan el bot
@@ -215,7 +247,9 @@ async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
   if (!respuestaFinal) return;
 
   let envio;
-  if (provider === 'whapi') {
+  if (provider === 'ultramsg') {
+    envio = await enviarWhatsAppUltraMsg(telefono, respuestaFinal);
+  } else if (provider === 'whapi') {
     envio = await enviarWhatsAppWhapi(telefono, respuestaFinal);
   } else if (provider === 'meta' || usarMeta()) {
     envio = await enviarWhatsAppMeta(telefono, respuestaFinal);

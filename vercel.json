@@ -2,7 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/admin/:path*",           "destination": "/api/backend" },
+{ "source": "/admin/:path*",           "destination": "/api/backend" },
     { "source": "/pagos/:path*",           "destination": "/api/backend" },
     { "source": "/webhook/:path*",         "destination": "/api/backend" },
     { "source": "/test/:path*",            "destination": "/api/backend" },
