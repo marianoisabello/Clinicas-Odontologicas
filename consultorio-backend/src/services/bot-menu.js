@@ -13,14 +13,6 @@ const MENU_PRINCIPAL = `Hola, bienvenido/a a *Sonrisa* 😊 ¿Cómo puedo ayudar
 2️⃣ Horarios
 `;
 
-const MENU_REGRESO = `¡Hola, bienvenido/a nuevamente a *Sonrisa*! 😊 ¿En qué te podemos ayudar hoy?
-
-1️⃣ Turnos
-2️⃣ Horarios
-`;
-
-const MENU_OPCIONES = `¿Puedo ayudarte con algo más?\n\n1️⃣ Turnos\n2️⃣ Horarios`;
-
 const HORARIOS = `Nuestro horario de atención es:\n📅 *Lunes a viernes de 9 a 18hs*`;
 
 /**
@@ -86,16 +78,20 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
 
     case 'menu_principal': {
       if (input === '1') {
-        nuevoEstado = 'agenda_ia';
-        nuevoContexto = {};
-        usarIA = true;
-        respuesta = null;
+        const servicios = await listarTratamientos();
+        if (!servicios.length) {
+          respuesta = 'No hay servicios disponibles en este momento. Por favor, contactanos directamente.';
+          nuevoEstado = 'menu_principal';
+        } else {
+          respuesta = buildListaServicios(servicios);
+          nuevoEstado = 'menu_servicios';
+          nuevoContexto = { servicios };
+        }
       } else if (input === '2') {
-        respuesta = `${HORARIOS}\n\n${MENU_OPCIONES}`;
+        respuesta = `${HORARIOS}\n\n¿Puedo ayudarte con algo más?\n\n${MENU_PRINCIPAL}`;
         nuevoEstado = 'menu_principal';
       } else {
-        // Mensaje no reconocido en menú: el usuario ya es conocido, saludar como regreso
-        respuesta = MENU_REGRESO;
+        respuesta = MENU_PRINCIPAL;
         nuevoEstado = 'menu_principal';
       }
       break;
