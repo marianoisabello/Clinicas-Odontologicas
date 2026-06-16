@@ -7,44 +7,52 @@ const TZ = process.env.CONSULTORIO_TZ || 'America/Argentina/Buenos_Aires';
 
 /**
  * Devuelve los slots disponibles en una fecha para un tratamiento dado.
- * fecha en formato 'yyyy-MM-dd' (interpretada en TZ Buenos Aires)
+ * @param {string} fecha - 'yyyy-MM-dd'
+ * @param {string} tratamientoId - UUID del tratamiento
  */
 export async function obtenerDisponibilidad(fecha, tratamientoId) {
   // 1. Buscar duración del tratamiento
-  const { data: tratamiento, error: errTrat } = await supabase
+  const { data: tratamiento } = await supabase
     .from('tratamientos')
     .select('id, nombre, duracion_minutos')
     .eq('id', tratamientoId)
     .eq('activo', true)
     .single();
 
-  if (errTrat || !tratamiento) {
-    return { ok: false, error: 'Tratamiento no encontrado' };
+  if (!tratamiento) return { ok: false, error: 'Tratamiento no encontrado' };
+
+  // 2. Verificar que haya al menos un profesional activo
+  const { data: profesionales } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('rol', 'odontologo')
+    .eq('activo', true);
+
+  if (!profesionales || profesionales.length === 0) {
+    return { ok: false, error: 'No hay profesionales configurados en el sistema' };
   }
 
   const duracion = tratamiento.duracion_minutos;
 
-  // 2. Definir horario laboral del día
+  // 3. Horario laboral del día
   const diaSemana = toZonedTime(parseISO(fecha), TZ).getDay();
   let horaInicio, horaFin;
-
   if (diaSemana === 0) return { ok: true, slots: [] }; // domingo cerrado
-  if (diaSemana === 6) {
-    horaInicio = 9;
-    horaFin = 13;
-  } else {
-    horaInicio = 9;
-    horaFin = 20;
-  }
+  if (diaSemana === 6) { horaInicio = 9; horaFin = 13; }
+  else { horaInicio = 9; horaFin = 20; }
 
-  // 3. Obtener turnos ocupados de ese día
+  // 4. Obtener turnos ocupados del día (usando timestamps reales de la DB)
+  const diaInicioUTC = new Date(`${fecha}T00:00:00-03:00`).toISOString();
+  const diaFinUTC = new Date(`${fecha}T23:59:59-03:00`).toISOString();
+
   const { data: turnos } = await supabase
     .from('turnos')
-    .select('fecha, hora_inicio, hora_fin, odontologo_id')
-    .eq('fecha', fecha)
+    .select('fecha_hora_inicio, fecha_hora_fin')
+    .gte('fecha_hora_inicio', diaInicioUTC)
+    .lte('fecha_hora_inicio', diaFinUTC)
     .in('estado', ['pendiente', 'confirmado']);
 
-  // 4. Generar slots cada 30 minutos y filtrar los que chocan
+  // 5. Generar slots cada 30 minutos y filtrar los que chocan
   const slots = [];
   for (let h = horaInicio; h < horaFin; h++) {
     for (const m of [0, 30]) {
@@ -54,20 +62,18 @@ export async function obtenerDisponibilidad(fecha, tratamientoId) {
 
       // No ofrecer slots que se pasan del horario de cierre
       const slotFinLocal = toZonedTime(slotFin, TZ);
-      if (slotFinLocal.getHours() > horaFin ||
-          (slotFinLocal.getHours() === horaFin && slotFinLocal.getMinutes() > 0)) {
-        continue;
-      }
+      if (
+        slotFinLocal.getHours() > horaFin ||
+        (slotFinLocal.getHours() === horaFin && slotFinLocal.getMinutes() > 0)
+      ) continue;
 
       // No ofrecer slots en el pasado
       if (slotInicio < new Date()) continue;
 
       // Verificar que no choque con turno existente
-      const choca = (turnos || []).some((t) => {
-        const tInicioStr = t.hora_inicio;
-        const tFinStr = t.hora_fin || addMinutes(parseISO(`${t.fecha}T${t.hora_inicio}`), 30).toISOString().split('T')[1].substring(0,5);
-        const tInicio = fromZonedTime(`${t.fecha}T${tInicioStr}`, TZ);
-        const tFin = fromZonedTime(`${t.fecha}T${tFinStr}`, TZ);
+      const choca = (turnos || []).some(t => {
+        const tInicio = new Date(t.fecha_hora_inicio);
+        const tFin = new Date(t.fecha_hora_fin);
         return slotInicio < tFin && slotFin > tInicio;
       });
 
@@ -81,48 +87,42 @@ export async function obtenerDisponibilidad(fecha, tratamientoId) {
     }
   }
 
-  // 5. Bloquear slots que se superponen con eventos de Google Calendar
+  // 6. Bloquear slots que se superponen con eventos de Google Calendar
   try {
-    const { data: gcCreds } = await supabase
+    const { data: gcCredsList } = await supabase
       .from('google_calendar_credentials')
       .select('profesional_id')
-      .limit(1)
-      .single();
+      .limit(1);
+
+    const gcCreds = gcCredsList?.[0] ?? null;
 
     if (gcCreds) {
       const eventosGoogle = await listarEventosDelDia(gcCreds.profesional_id, fecha);
-
       if (eventosGoogle.length > 0) {
-        const slotsAntesGoogle = slots.length;
-
-        const slotsFiltrados = slots.filter(slot => {
-          const slotInicio = new Date(slot.inicio);
-          const slotFin = addMinutes(slotInicio, duracion);
-
+        const antes = slots.length;
+        const filtrados = slots.filter(slot => {
+          const si = new Date(slot.inicio);
+          const sf = addMinutes(si, duracion);
           return !eventosGoogle.some(ev => {
-            const evInicio = new Date(ev.inicio);
-            const evFin = new Date(ev.fin);
-            return slotInicio < evFin && slotFin > evInicio;
+            const ei = new Date(ev.inicio);
+            const ef = new Date(ev.fin);
+            return si < ef && sf > ei;
           });
         });
-
-        console.log(
-          `📅 Google Calendar bloqueó ${slotsAntesGoogle - slotsFiltrados.length} slots para ${fecha}`
-        );
-
+        console.log(`📅 Google Calendar bloqueó ${antes - filtrados.length} slots para ${fecha}`);
         slots.length = 0;
-        slots.push(...slotsFiltrados);
+        slots.push(...filtrados);
       }
     }
   } catch (gcErr) {
-    console.error(`⚠️  No se pudo consultar Google Calendar para disponibilidad (${fecha}):`, gcErr.message);
+    console.error(`⚠️  No se pudo consultar Google Calendar (${fecha}):`, gcErr.message);
   }
 
   return { ok: true, tratamiento: tratamiento.nombre, duracion, slots };
 }
 
 /**
- * Crea un turno. Hace doble verificación de disponibilidad para evitar race conditions.
+ * Crea un turno en la DB y sincroniza con Google Calendar si está configurado.
  */
 export async function crearTurno({ pacienteId, odontologoId, fechaHoraISO, tratamientoId, origen = 'whatsapp' }) {
   const { data: tratamiento } = await supabase
@@ -135,38 +135,18 @@ export async function crearTurno({ pacienteId, odontologoId, fechaHoraISO, trata
 
   const inicio = parseISO(fechaHoraISO);
   const fin = addMinutes(inicio, tratamiento.duracion_minutos);
-  const fechaStr = format(inicio, 'yyyy-MM-dd');
-  const horaInicioStr = format(toZonedTime(inicio, TZ), 'HH:mm');
-  const horaFinStr = format(toZonedTime(fin, TZ), 'HH:mm');
-
-  // Verificar conflictos antes de insertar
-  const { data: conflictos } = await supabase
-    .from('turnos')
-    .select('id')
-    .eq('fecha', fechaStr)
-    .in('estado', ['pendiente', 'confirmado']);
-
-  // Filtrar conflictos manualmente por hora
-  const hayConflicto = (conflictos || []).some(t => {
-    // Para simplificar, asumimos que cualquier turno en el mismo día a la misma hora es conflicto
-    return false; // La lógica completa requeriría más datos
-  });
-
-  if (hayConflicto) {
-    return { ok: false, error: 'El horario ya no está disponible' };
-  }
 
   const { data, error } = await supabase
     .from('turnos')
     .insert({
       paciente_id: pacienteId,
-      odontologo_id: odontologoId,
-      tratamiento_id: tratamientoId,
-      fecha: fechaStr,
-      hora_inicio: horaInicioStr,
-      hora_fin: horaFinStr,
+      profesional_id: odontologoId,
+      fecha_hora_inicio: inicio.toISOString(),
+      fecha_hora_fin: fin.toISOString(),
+      tratamiento: tratamiento.nombre,
       estado: 'pendiente',
-      notas: `Origen: ${origen}`,
+      origen: origen === 'whatsapp' ? 'whatsapp' : 'manual',
+      notas: `Agendado vía WhatsApp`,
     })
     .select()
     .single();
@@ -175,16 +155,6 @@ export async function crearTurno({ pacienteId, odontologoId, fechaHoraISO, trata
 
   // ── SYNC GOOGLE CALENDAR (no-crítico) ──────────────────────────────────────
   try {
-    const { data: paciente } = await supabase
-      .from('pacientes')
-      .select('nombre, apellido')
-      .eq('id', pacienteId)
-      .single();
-
-    const nombrePaciente = paciente
-      ? `${paciente.nombre} ${paciente.apellido}`.trim()
-      : 'Paciente';
-
     const { data: gcCreds } = await supabase
       .from('google_calendar_credentials')
       .select('profesional_id')
@@ -192,25 +162,34 @@ export async function crearTurno({ pacienteId, odontologoId, fechaHoraISO, trata
       .single();
 
     if (gcCreds) {
-      const colorId = origen === 'whatsapp' ? '7' : '10';
+      const { data: paciente } = await supabase
+        .from('pacientes')
+        .select('nombre, apellido')
+        .eq('id', pacienteId)
+        .single();
+
+      const nombrePaciente = paciente
+        ? `${paciente.nombre} ${paciente.apellido}`.trim()
+        : 'Paciente';
 
       const googleEventId = await crearEvento(odontologoId, {
         inicio: inicio.toISOString(),
         fin: fin.toISOString(),
         titulo: `Turno: ${nombrePaciente} - ${tratamiento.nombre}`,
-        descripcion: `Origen: ${origen}\nPaciente ID: ${pacienteId}\nTurno ID: ${data.id}`,
-        colorId,
+        descripcion: `Origen: WhatsApp\nPaciente ID: ${pacienteId}\nTurno ID: ${data.id}`,
+        colorId: '7',
       });
 
+      // Guardar el event ID en notas ya que la tabla no tiene columna google_event_id
       await supabase
         .from('turnos')
-        .update({ google_event_id: googleEventId })
+        .update({ notas: `Agendado vía WhatsApp | google_event_id: ${googleEventId}` })
         .eq('id', data.id);
 
       data.google_event_id = googleEventId;
     }
   } catch (gcErr) {
-    console.error(`⚠️  No se pudo sincronizar turno ${data.id} con Google Calendar:`, gcErr.message);
+    console.error(`⚠️  No se pudo sincronizar con Google Calendar (turno ${data.id}):`, gcErr.message);
   }
   // ───────────────────────────────────────────────────────────────────────────
 
@@ -222,32 +201,32 @@ export async function crearTurno({ pacienteId, odontologoId, fechaHoraISO, trata
 }
 
 export async function listarTurnosPaciente(pacienteId) {
-  const hoy = format(new Date(), 'yyyy-MM-dd');
-  
+  const hoy = new Date().toISOString();
+
   const { data } = await supabase
     .from('turnos')
-    .select('id, fecha, hora_inicio, tratamiento_id, estado, tratamientos(nombre)')
+    .select('id, fecha_hora_inicio, fecha_hora_fin, tratamiento, estado')
     .eq('paciente_id', pacienteId)
-    .gte('fecha', hoy)
-    .order('fecha', { ascending: true })
-    .order('hora_inicio', { ascending: true });
+    .gte('fecha_hora_inicio', hoy)
+    .order('fecha_hora_inicio', { ascending: true });
 
-  return { 
-    ok: true, 
+  return {
+    ok: true,
     turnos: (data || []).map(t => ({
       id: t.id,
-      fecha: t.fecha,
-      hora: t.hora_inicio,
-      tratamiento: t.tratamientos?.nombre || 'Consulta',
-      estado: t.estado
-    }))
+      fecha: format(toZonedTime(new Date(t.fecha_hora_inicio), TZ), 'yyyy-MM-dd'),
+      hora: format(toZonedTime(new Date(t.fecha_hora_inicio), TZ), 'HH:mm'),
+      tratamiento: t.tratamiento || 'Consulta',
+      estado: t.estado,
+    })),
   };
 }
 
 export async function cancelarTurno(turnoId) {
+  // Buscar el google_event_id guardado en notas (workaround hasta agregar la columna)
   const { data: turno } = await supabase
     .from('turnos')
-    .select('google_event_id, odontologo_id')
+    .select('notas, profesional_id')
     .eq('id', turnoId)
     .single();
 
@@ -258,15 +237,17 @@ export async function cancelarTurno(turnoId) {
 
   if (error) return { ok: false, error: error.message };
 
-  // ── SYNC GOOGLE CALENDAR (no-crítico) ──────────────────────────────────────
-  if (turno?.google_event_id && turno?.odontologo_id) {
-    try {
-      await eliminarEvento(turno.odontologo_id, turno.google_event_id);
-    } catch (gcErr) {
-      console.error(`⚠️  No se pudo eliminar evento de Google Calendar (turno ${turnoId}):`, gcErr.message);
+  // Intentar eliminar de Google Calendar si hay event ID en notas
+  if (turno?.notas && turno?.profesional_id) {
+    const match = turno.notas.match(/google_event_id: ([^\s|]+)/);
+    if (match) {
+      try {
+        await eliminarEvento(turno.profesional_id, match[1]);
+      } catch (gcErr) {
+        console.error(`⚠️  No se pudo eliminar evento de Google Calendar (turno ${turnoId}):`, gcErr.message);
+      }
     }
   }
-  // ───────────────────────────────────────────────────────────────────────────
 
   return { ok: true };
 }

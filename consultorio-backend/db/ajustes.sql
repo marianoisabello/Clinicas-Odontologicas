@@ -77,3 +77,32 @@ DROP TRIGGER IF EXISTS pacientes_updated_at ON pacientes;
 CREATE TRIGGER pacientes_updated_at
   BEFORE UPDATE ON pacientes
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- 6. Tabla de credenciales de Google Calendar por profesional
+CREATE TABLE IF NOT EXISTS google_calendar_credentials (
+  profesional_id  uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  google_email    text,
+  access_token    text NOT NULL,
+  refresh_token   text NOT NULL,
+  expires_at      timestamp with time zone NOT NULL,
+  calendar_id     text NOT NULL DEFAULT 'primary',
+  connected_at    timestamp with time zone DEFAULT now(),
+  last_sync_at    timestamp with time zone DEFAULT now()
+);
+
+-- Solo los usuarios autenticados (staff del consultorio) pueden ver/modificar sus propias credenciales
+ALTER TABLE google_calendar_credentials ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "profesional manage own credentials"
+  ON google_calendar_credentials
+  FOR ALL TO authenticated
+  USING (profesional_id = auth.uid())
+  WITH CHECK (profesional_id = auth.uid());
+
+-- El service_role del backend necesita acceso total
+GRANT ALL ON TABLE google_calendar_credentials TO service_role;
+
+-- 7. Columna bot_estado y bot_contexto en conversaciones_whatsapp (si no existen)
+ALTER TABLE conversaciones_whatsapp
+  ADD COLUMN IF NOT EXISTS bot_estado text DEFAULT 'inicio',
+  ADD COLUMN IF NOT EXISTS bot_contexto jsonb DEFAULT '{}';
