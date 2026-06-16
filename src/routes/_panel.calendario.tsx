@@ -147,6 +147,31 @@ function CalendarioPage() {
     },
   });
 
+  const assignProfesional = useMutation({
+    mutationFn: async ({ id, profesional_id }: { id: string; profesional_id: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/admin/turnos/${id}/profesional`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ profesional_id }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Error al asignar profesional");
+      }
+      return res.json();
+    },
+    onSuccess: (_, { profesional_id }) => {
+      qc.invalidateQueries({ queryKey: ["turnos-week"] });
+      setEditing((prev) => prev ? { ...prev, profesional_id } : prev);
+      toast.success("Profesional asignado ✅");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const openCreate = (date: Date) => {
     setCreating(date);
     setForm({
@@ -358,6 +383,28 @@ function CalendarioPage() {
                   </p>
                   {editing.tratamiento && <p className="mt-1 text-sm">{editing.tratamiento}</p>}
                   {editing.notas && <p className="text-sm text-muted-foreground">{editing.notas}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Odontólogo</Label>
+                  <Select
+                    value={editing.profesional_id ?? "__none__"}
+                    onValueChange={(v) => {
+                      const profId = v === "__none__" ? "" : v;
+                      if (profId) assignProfesional.mutate({ id: editing.id, profesional_id: profId });
+                    }}
+                    disabled={assignProfesional.isPending}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sin asignar</SelectItem>
+                      {profs.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {assignProfesional.isPending && (
+                    <p className="text-xs text-muted-foreground">Sincronizando calendario...</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Estado</Label>
