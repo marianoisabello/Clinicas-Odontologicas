@@ -85,7 +85,7 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
         usarIA = true;
         respuesta = null;
       } else if (input === '2') {
-        respuesta = `${HORARIOS}\n\n¿Querés sacar un turno? Escribí *1*`;
+        respuesta = `${HORARIOS}\n\n${MENU_OPCIONES}`;
         nuevoEstado = 'menu_principal';
       } else {
         // Mensaje no reconocido → silencio (no responder a chats personales)
