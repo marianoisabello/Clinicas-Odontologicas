@@ -54,8 +54,6 @@ export function extraerMensajesWhapi(body) {
     const messages = body.messages || [];
 
     for (const msg of messages) {
-      // Ignorar mensajes propios (outgoing)
-      if (msg.from_me) continue;
       if (msg.type !== 'text') continue;
 
       // from viene como "5491123456789@s.whatsapp.net"

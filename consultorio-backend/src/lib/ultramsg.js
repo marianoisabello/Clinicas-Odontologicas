@@ -82,7 +82,6 @@ export function extraerMensajesUltraMsg(body) {
 
       const data = evento.data;
       if (!data) continue;
-      if (data.fromMe) continue;
       if (data.type !== 'chat') continue; // solo texto
 
       const telefono = '+' + data.from.replace('@c.us', '').replace('@s.whatsapp.net', '');

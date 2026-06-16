@@ -60,16 +60,20 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
   let nuevoContexto = contexto;
   let usarIA = false;
 
+  // El trigger phrase reinicia el bot desde cualquier estado
+  const triggerPhrase = process.env.BOT_TRIGGER_PHRASE || 'Hola, quiero sacar un turno';
+  if (input.toLowerCase() === normalizarInput(triggerPhrase).toLowerCase()) {
+    await supabase
+      .from('conversaciones_whatsapp')
+      .update({ bot_estado: 'menu_principal', bot_contexto: {} })
+      .eq('id', conversacionId);
+    return { respuesta: MENU_PRINCIPAL, usarIA: false, contexto: {} };
+  }
+
   switch (estado) {
     case 'inicio': {
-      const triggerPhrase = process.env.BOT_TRIGGER_PHRASE || 'Hola, quiero sacar un turno';
-      if (normalizarInput(triggerPhrase).toLowerCase() !== input.toLowerCase()) {
-        // Mensaje recibido pero bot inactivo — el staff lo ve en el panel
-        return { respuesta: null, usarIA: false, contexto };
-      }
-      respuesta = MENU_PRINCIPAL;
-      nuevoEstado = 'menu_principal';
-      break;
+      // Si llega acá, el mensaje no era el trigger phrase → silencio
+      return { respuesta: null, usarIA: false, contexto };
     }
 
     case 'menu_principal': {
