@@ -65,8 +65,6 @@ app.use('/pagos', async (req, res, next) => {
  * Webhook de Whapi — recibe mensajes entrantes
  */
 app.post('/webhook/whapi', async (req, res) => {
-  res.sendStatus(200);
-
   console.log('[webhook/whapi] body:', JSON.stringify(req.body));
 
   // UltraMsg manda event_type en el body — Whapi manda messages[]
@@ -83,6 +81,7 @@ app.post('/webhook/whapi', async (req, res) => {
         console.error('[UltraMsg] Error procesando mensaje:', err);
       }
     }
+    res.sendStatus(200);
     return;
   }
 
@@ -90,6 +89,7 @@ app.post('/webhook/whapi', async (req, res) => {
   const whapiToken = process.env.WHAPI_WEBHOOK_TOKEN;
   if (whapiToken && req.headers['x-whapi-token'] !== whapiToken) {
     console.warn('[Whapi] token inválido');
+    res.sendStatus(403);
     return;
   }
 
@@ -104,6 +104,8 @@ app.post('/webhook/whapi', async (req, res) => {
       console.error('Error procesando mensaje Whapi:', err);
     }
   }
+
+  res.sendStatus(200);
 });
 
 /**
@@ -111,8 +113,6 @@ app.post('/webhook/whapi', async (req, res) => {
  * UltraMsg envía un token de seguridad en el body que hay que validar
  */
 app.post('/webhook/ultramsg', async (req, res) => {
-  res.sendStatus(200);
-
   console.log('[UltraMsg webhook] headers:', JSON.stringify(req.headers));
   console.log('[UltraMsg webhook] body:', JSON.stringify(req.body));
 
@@ -127,6 +127,8 @@ app.post('/webhook/ultramsg', async (req, res) => {
       console.error('[UltraMsg] Error procesando mensaje:', err);
     }
   }
+
+  res.sendStatus(200);
 });
 
 /**

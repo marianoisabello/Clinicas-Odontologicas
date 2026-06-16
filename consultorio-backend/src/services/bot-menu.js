@@ -62,9 +62,8 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
 
   switch (estado) {
     case 'inicio': {
-      // Si hay frase de activación configurada, solo arrancar el bot si coincide
-      const triggerPhrase = process.env.BOT_TRIGGER_PHRASE;
-      if (triggerPhrase && normalizarInput(triggerPhrase) !== input) {
+      const triggerPhrase = process.env.BOT_TRIGGER_PHRASE || 'Hola, quiero sacar un turno';
+      if (normalizarInput(triggerPhrase).toLowerCase() !== input.toLowerCase()) {
         // Mensaje recibido pero bot inactivo — el staff lo ve en el panel
         return { respuesta: null, usarIA: false, contexto };
       }
