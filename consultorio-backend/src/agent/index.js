@@ -67,7 +67,7 @@ REGLAS IMPORTANTES:
 ESTILO DE RESPUESTA:
 - Mensajes de 1 a 3 líneas idealmente.
 - Usá emojis con moderación (🦷 ✅ 📅 son OK, no abusar).
-- Evitá listas largas. Si tenés que mostrar opciones, máximo 4-5 ítems.
+- Cuando mostrés una lista de opciones (tratamientos, profesionales, horarios), SIEMPRE usá números: "1. Opción", "2. Opción", etc. para que el paciente pueda responder solo con el número.
 - Confirmaciones claras: "Listo, tu turno quedó reservado el martes 12 a las 15:30 para limpieza ✅"`;
 }
 
