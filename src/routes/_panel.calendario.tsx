@@ -63,7 +63,8 @@ function CalendarioPage() {
   const [editing, setEditing] = useState<Turno | null>(null);
   const [creating, setCreating] = useState<Date | null>(null);
   const [form, setForm] = useState({
-    paciente_id: "", profesional_id: "", fecha_hora_inicio: "", duracion_min: 45, tratamiento: "", notas: "",
+    paciente_id: "", profesional_id: "", fecha_hora_inicio: "", duracion_min: 45,
+    tratamiento_id: "", tratamiento: "", notas: "",
   });
 
   const dias = useMemo(() => Array.from({ length: 6 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -96,6 +97,18 @@ function CalendarioPage() {
     },
   });
 
+  const { data: tratamientos = [] } = useQuery({
+    queryKey: ["tratamientos-activos"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tratamientos")
+        .select("id, nombre, precio, duracion_minutos")
+        .eq("activo", true)
+        .order("nombre");
+      return data ?? [];
+    },
+  });
+
   const filtered = profFilter.length === 0 ? turnos : turnos.filter(
     (t) => t.profesional_id && profFilter.includes(t.profesional_id),
   );
@@ -114,10 +127,24 @@ function CalendarioPage() {
         origen: "manual" as const,
       });
       if (error) throw error;
+
+      if (form.tratamiento_id) {
+        const trat = tratamientos.find((t) => t.id === form.tratamiento_id);
+        await supabase.from("paciente_tratamientos").insert({
+          paciente_id: form.paciente_id,
+          tratamiento_id: form.tratamiento_id,
+          profesional_id: form.profesional_id || null,
+          fecha: format(inicio, "yyyy-MM-dd"),
+          precio_final: trat?.precio ?? 0,
+          estado: "pendiente",
+          notas: form.notas || null,
+        });
+      }
     },
     onSuccess: () => {
       toast.success("Turno creado");
       qc.invalidateQueries({ queryKey: ["turnos-week"] });
+      qc.invalidateQueries({ queryKey: ["paciente-tratamientos"] });
       setCreating(null);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -177,7 +204,7 @@ function CalendarioPage() {
     setForm({
       paciente_id: "", profesional_id: "",
       fecha_hora_inicio: format(date, "yyyy-MM-dd'T'HH:mm"),
-      duracion_min: 45, tratamiento: "", notas: "",
+      duracion_min: 45, tratamiento_id: "", tratamiento: "", notas: "",
     });
   };
 
@@ -352,7 +379,25 @@ function CalendarioPage() {
             </div>
             <div className="space-y-2">
               <Label>Tratamiento</Label>
-              <Input value={form.tratamiento} onChange={(e) => setForm({ ...form, tratamiento: e.target.value })} />
+              <Select
+                value={form.tratamiento_id}
+                onValueChange={(v) => {
+                  const trat = tratamientos.find((t) => t.id === v);
+                  setForm({
+                    ...form,
+                    tratamiento_id: v,
+                    tratamiento: trat?.nombre ?? "",
+                    duracion_min: trat?.duracion_minutos ?? form.duracion_min,
+                  });
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>
+                  {tratamientos.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Notas</Label>
