@@ -15,9 +15,19 @@ export const tools = [
     },
   },
   {
+    name: 'listar_profesionales',
+    description:
+      'Lista los profesionales del consultorio disponibles para atender. Usar cuando el paciente quiere elegir con quién atenderse.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: 'consultar_disponibilidad',
     description:
-      'Consulta los horarios disponibles para un tratamiento en una fecha específica. Devuelve los slots libres del día.',
+      'Consulta los horarios disponibles para un tratamiento en una fecha específica. Si el paciente eligió un profesional, pasá profesional_id para ver solo la agenda de ese profesional.',
     input_schema: {
       type: 'object',
       properties: {
@@ -28,6 +38,10 @@ export const tools = [
         tratamiento_id: {
           type: 'string',
           description: 'UUID del tratamiento (obtenido de listar_tratamientos_disponibles)',
+        },
+        profesional_id: {
+          type: 'string',
+          description: 'UUID del profesional (opcional). Solo pasarlo si el paciente eligió un profesional específico.',
         },
       },
       required: ['fecha', 'tratamiento_id'],

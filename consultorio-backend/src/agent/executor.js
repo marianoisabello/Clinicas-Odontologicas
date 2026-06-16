@@ -32,8 +32,13 @@ export async function ejecutarTool(nombre, args, contexto) {
       };
     }
 
+    case 'listar_profesionales': {
+      const profesionales = await listarProfesionales();
+      return { profesionales };
+    }
+
     case 'consultar_disponibilidad': {
-      return await obtenerDisponibilidad(args.fecha, args.tratamiento_id);
+      return await obtenerDisponibilidad(args.fecha, args.tratamiento_id, args.profesional_id ?? null);
     }
 
     case 'reservar_turno': {

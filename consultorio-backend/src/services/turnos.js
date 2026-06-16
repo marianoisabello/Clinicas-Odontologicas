@@ -9,8 +9,9 @@ const TZ = process.env.CONSULTORIO_TZ || 'America/Argentina/Buenos_Aires';
  * Devuelve los slots disponibles en una fecha para un tratamiento dado.
  * @param {string} fecha - 'yyyy-MM-dd'
  * @param {string} tratamientoId - UUID del tratamiento
+ * @param {string|null} profesionalId - UUID del profesional (opcional)
  */
-export async function obtenerDisponibilidad(fecha, tratamientoId) {
+export async function obtenerDisponibilidad(fecha, tratamientoId, profesionalId = null) {
   // 1. Buscar duración del tratamiento
   const { data: tratamiento } = await supabase
     .from('tratamientos')
@@ -45,12 +46,19 @@ export async function obtenerDisponibilidad(fecha, tratamientoId) {
   const diaInicioUTC = new Date(`${fecha}T00:00:00-03:00`).toISOString();
   const diaFinUTC = new Date(`${fecha}T23:59:59-03:00`).toISOString();
 
-  const { data: turnos } = await supabase
+  let turnosQuery = supabase
     .from('turnos')
     .select('fecha_hora_inicio, fecha_hora_fin')
     .gte('fecha_hora_inicio', diaInicioUTC)
     .lte('fecha_hora_inicio', diaFinUTC)
     .in('estado', ['pendiente', 'confirmado']);
+
+  // Si se especificó profesional, filtrar solo sus turnos
+  if (profesionalId) {
+    turnosQuery = turnosQuery.eq('profesional_id', profesionalId);
+  }
+
+  const { data: turnos } = await turnosQuery;
 
   // 5. Generar slots cada 30 minutos y filtrar los que chocan
   const slots = [];
@@ -87,14 +95,19 @@ export async function obtenerDisponibilidad(fecha, tratamientoId) {
     }
   }
 
-  // 6. Bloquear slots que se superponen con eventos de Google Calendar
+  // 6. Bloquear slots con eventos de Google Calendar (solo si hay profesional específico)
   try {
-    const { data: gcCredsList } = await supabase
-      .from('google_calendar_credentials')
-      .select('profesional_id')
-      .limit(1);
+    const gcTarget = profesionalId ?? null;
+    let gcCreds = null;
 
-    const gcCreds = gcCredsList?.[0] ?? null;
+    if (gcTarget) {
+      // Verificar si ese profesional tiene calendario conectado
+      const { data: gcCredsList } = await supabase
+        .from('google_calendar_credentials')
+        .select('profesional_id')
+        .eq('profesional_id', gcTarget);
+      gcCreds = gcCredsList?.[0] ?? null;
+    }
 
     if (gcCreds) {
       const eventosGoogle = await listarEventosDelDia(gcCreds.profesional_id, fecha);
