@@ -55,6 +55,7 @@ export function extraerMensajesWhapi(body) {
 
     for (const msg of messages) {
       if (msg.type !== 'text') continue;
+      if (msg.from_me) continue; // ignorar mensajes enviados por el bot
 
       // from viene como "5491123456789@s.whatsapp.net"
       const telefonoRaw = msg.from || msg.chat_id || '';

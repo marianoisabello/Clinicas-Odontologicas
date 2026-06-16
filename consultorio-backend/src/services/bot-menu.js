@@ -13,6 +13,8 @@ const MENU_PRINCIPAL = `Hola, bienvenido/a a *Sonrisa* 😊 ¿Cómo puedo ayudar
 2️⃣ Horarios
 `;
 
+const MENU_OPCIONES = `¿Puedo ayudarte con algo más?\n\n1️⃣ Turnos\n2️⃣ Horarios`;
+
 const HORARIOS = `Nuestro horario de atención es:\n📅 *Lunes a viernes de 9 a 18hs*`;
 
 /**
@@ -78,21 +80,17 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
 
     case 'menu_principal': {
       if (input === '1') {
-        const servicios = await listarTratamientos();
-        if (!servicios.length) {
-          respuesta = 'No hay servicios disponibles en este momento. Por favor, contactanos directamente.';
-          nuevoEstado = 'menu_principal';
-        } else {
-          respuesta = buildListaServicios(servicios);
-          nuevoEstado = 'menu_servicios';
-          nuevoContexto = { servicios };
-        }
+        nuevoEstado = 'agenda_ia';
+        nuevoContexto = {};
+        usarIA = true;
+        respuesta = null;
       } else if (input === '2') {
-        respuesta = `${HORARIOS}\n\n¿Puedo ayudarte con algo más?\n\n${MENU_PRINCIPAL}`;
+        respuesta = `${HORARIOS}\n\n${MENU_OPCIONES}`;
         nuevoEstado = 'menu_principal';
       } else {
-        respuesta = MENU_PRINCIPAL;
-        nuevoEstado = 'menu_principal';
+        // Mensaje no reconocido → silencio (no responder a chats personales)
+        nuevoEstado = 'inicio';
+        respuesta = null;
       }
       break;
     }
