@@ -130,7 +130,7 @@ function CalendarioPage() {
 
       if (form.tratamiento_id) {
         const trat = tratamientos.find((t) => t.id === form.tratamiento_id);
-        await supabase.from("paciente_tratamientos").insert({
+        const { error: errAsig } = await supabase.from("paciente_tratamientos").insert({
           paciente_id: form.paciente_id,
           tratamiento_id: form.tratamiento_id,
           profesional_id: form.profesional_id || null,
@@ -139,6 +139,7 @@ function CalendarioPage() {
           estado: "pendiente",
           notas: form.notas || null,
         });
+        if (errAsig) throw errAsig;
       }
     },
     onSuccess: () => {
