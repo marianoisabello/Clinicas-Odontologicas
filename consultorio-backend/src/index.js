@@ -212,6 +212,27 @@ async function manejarMensajeEntrante(telefono, mensaje, provider = 'twilio') {
     }
   }
 
+  // Verificar si el bot ya está activo para este número o si es el trigger phrase
+  const triggerPhrase = process.env.BOT_TRIGGER_PHRASE || 'Hola, quiero sacar un turno';
+  const esTrigger = mensaje.trim().toLowerCase() === triggerPhrase.toLowerCase();
+
+  if (!esTrigger) {
+    // Buscar si ya existe una conversación activa (sin crearla)
+    const { supabase } = await import('./lib/supabase.js');
+    const telefonoNorm = telefono.replace('whatsapp:', '').trim();
+    const { data: convExistente } = await supabase
+      .from('conversaciones_whatsapp')
+      .select('bot_estado')
+      .eq('telefono', telefonoNorm)
+      .maybeSingle();
+
+    const estadoActual = convExistente?.bot_estado ?? 'inicio';
+    if (estadoActual === 'inicio') {
+      console.log(`[bot] Mensaje ignorado de ${telefono} (bot inactivo)`);
+      return;
+    }
+  }
+
   const conversacion = await obtenerOCrearConversacion(telefono);
   if (!conversacion) {
     console.error('No se pudo crear conversación para', telefono);
