@@ -41,6 +41,9 @@ Odontologia/
 ✅ PDF de factura con impresión desde el navegador
 ✅ Tratamientos: Catálogo (ABM) + Asignaciones (linkea Paciente + Tratamiento, genera factura automática)
 ✅ Al crear asignación: genera factura, intenta link MP, abre Gmail automáticamente, toast con WhatsApp
+✅ Calendario: campo Tratamiento usa Select del catálogo (auto-completa duración y nombre)
+✅ Al crear turno con tratamiento: genera registro automático en `paciente_tratamientos` (estado pendiente, profesional, precio del catálogo)
+✅ Asignar/reasignar odontólogo desde el dialog del turno (PUT /admin/turnos/:id/profesional, sync Google Calendar)
 ✅ Integración Mercado Pago (sandbox): genera link de pago por preferencia, incluido en email y WhatsApp
 ✅ Webhook MP: marca factura como cobrada al recibir pago aprobado
 ✅ Dashboard con card de funcionalidades (Google, Apps Script, MP)
@@ -158,6 +161,7 @@ src/routes/
 | PUT | `/admin/profesionales/:id` | requireAdmin | Edita perfil |
 | DELETE | `/admin/profesionales/:id` | requireAdmin | Desactiva profesional |
 | POST | `/admin/profesionales/:id/invitar` | requireAdmin | Genera magic link |
+| PUT | `/admin/turnos/:id/profesional` | requireAuth | Asigna/reasigna profesional a turno + sync Google Calendar |
 | POST | `/pagos/crear-link` | requireAuth | Crea preferencia Mercado Pago |
 | POST | `/webhook/mp` | — | Webhook MP (marca cobrada) |
 | POST | `/webhook/whatsapp` | — | Webhook Twilio/Meta |
