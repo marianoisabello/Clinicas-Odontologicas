@@ -73,6 +73,7 @@ Odontologia/
 | `ANTHROPIC_API_KEY` | Backend — agente IA WhatsApp |
 | `WHAPI_TOKEN` | Backend — envío/recepción WhatsApp |
 | `WHAPI_API_URL` | Backend — default `https://gate.whapi.cloud` |
+| `WHAPI_CHANNEL_ID` | Backend — id del canal Whapi (`DRSTRG-RTDER`) |
 | `WHAPI_WEBHOOK_TOKEN` | Backend — opcional, valida header `x-whapi-token` |
 | `WHAPI_TEST_NUMBERS` | Backend — opcional, whitelist CSV de números de prueba |
 | `BOT_TRIGGER_PHRASE` | Backend — frase exacta para activar el bot |

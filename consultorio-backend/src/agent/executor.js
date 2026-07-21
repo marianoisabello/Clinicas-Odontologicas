@@ -57,7 +57,7 @@ export async function ejecutarTool(nombre, args, contexto) {
         odontologoId = profs[0].id;
       }
       return await crearTurno({
-        pacienteId: paciente.id,
+        pacienteId: pacienteActual.id,
         odontologoId,
         fechaHoraISO: args.fecha_hora_iso,
         tratamientoId: args.tratamiento_id,
@@ -93,8 +93,8 @@ export async function ejecutarTool(nombre, args, contexto) {
 
     case 'derivar_a_humano': {
       await supabase
-        .from('whatsapp_conversations')
-        .update({ estado: 'esperando_respuesta' })
+        .from('conversaciones_whatsapp')
+        .update({ estado: 'esperando_humano' })
         .eq('id', conversacionId);
       return { ok: true, mensaje: 'Conversación derivada al equipo del consultorio' };
     }

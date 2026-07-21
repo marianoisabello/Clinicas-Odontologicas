@@ -37,7 +37,11 @@ export async function enviarWhatsAppWhapi(telefono, mensaje) {
       const errMsg = data.error?.message || data.error || JSON.stringify(data);
       // Channel not found = token/canal desconectado o WHAPI_API_URL incorrecta
       if (String(errMsg).toLowerCase().includes('channel not found')) {
-        console.error('[Whapi] Channel not found — revisá en el panel Whapi que el canal esté ONLINE y que WHAPI_TOKEN / WHAPI_API_URL en Vercel correspondan a ese canal.');
+        console.error(
+          '[Whapi] Channel not found — canal esperado:',
+          process.env.WHAPI_CHANNEL_ID || '(sin WHAPI_CHANNEL_ID)',
+          '| revisá panel Whapi ONLINE y que WHAPI_TOKEN / WHAPI_API_URL en Vercel sean de ese canal.'
+        );
       }
       return { ok: false, error: errMsg };
     }

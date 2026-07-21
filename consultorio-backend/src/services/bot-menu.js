@@ -29,6 +29,8 @@ function textoHorarios() {
 function normalizarInput(texto) {
   return texto
     .trim()
+    // Keycaps WhatsApp: "1️⃣" / "1️⃣" → "1"
+    .replace(/(\d)\uFE0F?\u20E3/g, '$1')
     .replace('1️⃣', '1').replace('2️⃣', '2').replace('3️⃣', '3')
     .replace('4️⃣', '4').replace('5️⃣', '5').replace('6️⃣', '6')
     .replace('7️⃣', '7').replace('8️⃣', '8').replace('9️⃣', '9')
@@ -168,7 +170,8 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
         respuesta = MENU_PRINCIPAL;
         nuevoEstado = 'menu_principal';
         nuevoContexto = {};
-      } else if (/^(chau|adios|adiós|gracias|no.?gracias|listo)$/i.test(input)) {
+      } else if (/^(chau|adios|adiós|no,? gracias|nop|basta)$/i.test(input)) {
+        // No cerrar con solo "gracias": es frecuente a mitad del flujo de turno
         respuesta = '¡Perfecto! Cuando quieras sacar un turno, escribí *Hola, quiero sacar un turno*. 👋';
         nuevoEstado = 'inicio';
         nuevoContexto = {};

@@ -32,6 +32,7 @@ app.get('/health', (req, res) => res.json({
   ok: true,
   provider: 'whapi',
   whapi_configured: !!(process.env.WHAPI_TOKEN && process.env.WHAPI_API_URL),
+  whapi_channel_id: process.env.WHAPI_CHANNEL_ID || null,
   timestamp: new Date().toISOString(),
 }));
 

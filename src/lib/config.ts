@@ -1,8 +1,9 @@
 // Datos públicos de contacto (también editables desde /configuracion en DB)
+// WhatsApp Whapi / wa.me: +54 9 11 7671-4108 → 5491176714108
 export const CONSULTORIO = {
   nombre: "Sonrisa",
   whatsapp: "5491176714108", // sin + ni espacios para wa.me
-  telefono: "+54 11 7671-4108",
+  telefono: "+54 9 11 7671-4108",
   email: "contacto@sonrisa.com.ar",
   direccion: "Av. Corrientes 1234, CABA",
   horario: "Lunes a Viernes 9 a 20hs · Sábados 9 a 13hs",
