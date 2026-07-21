@@ -7,13 +7,12 @@
  * - Envía un recordatorio por WhatsApp solicitando confirmación.
  * - Marca el turno con un flag para no duplicar.
  *
- * IMPORTANTE: Para mensajes proactivos fuera de la ventana de 24hs de WhatsApp, se requiere
- * usar una plantilla aprobada por Meta (HSM). En el sandbox de Twilio podés probar libremente.
+ * Provider: Whapi (único canal WhatsApp del proyecto).
  */
 
 import 'dotenv/config';
 import { supabase } from '../lib/supabase.js';
-import { enviarWhatsApp } from '../lib/twilio.js';
+import { enviarWhatsAppWhapi } from '../lib/whapi.js';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
@@ -58,7 +57,7 @@ async function enviarRecordatorios() {
       `en ${process.env.CONSULTORIO_NOMBRE}.\n\n` +
       `Respondé *SI* para confirmar o *NO* si necesitás cancelar.`;
 
-    const r = await enviarWhatsApp(paciente.telefono, mensaje);
+    const r = await enviarWhatsAppWhapi(paciente.telefono, mensaje);
     if (r.ok) {
       await supabase
         .from('turnos')

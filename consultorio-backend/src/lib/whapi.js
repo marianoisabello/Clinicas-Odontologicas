@@ -1,9 +1,7 @@
 /**
- * Cliente para Whapi.cloud — WhatsApp API alternativa
- * Usada como solución interim mientras Meta Business está en revisión
+ * Cliente Whapi.cloud — único provider WhatsApp del proyecto
+ * Vars: WHAPI_TOKEN, WHAPI_API_URL (opcional, default gate.whapi.cloud)
  */
-
-const WHAPI_API_URL = process.env.WHAPI_API_URL || 'https://gate.whapi.cloud';
 
 /**
  * Envía un mensaje de texto vía Whapi
@@ -16,12 +14,14 @@ export async function enviarWhatsAppWhapi(telefono, mensaje) {
     return { ok: false, error: 'WHAPI_TOKEN no configurado' };
   }
 
-  // Whapi espera formato: 5491123456789@s.whatsapp.net
-  const telefonoLimpio = telefono.replace('whatsapp:', '').replace('+', '').replace('@s.whatsapp.net', '');
-  const to = `${telefonoLimpio}@s.whatsapp.net`;
+  const telefonoLimpio = telefono.replace('whatsapp:', '').replace('+', '').replace('@s.whatsapp.net', '').trim();
+  // Whapi acepta E.164 sin + o JID; preferimos dígitos (más compatible)
+  const to = telefonoLimpio;
+
+  const base = (process.env.WHAPI_API_URL || 'https://gate.whapi.cloud').replace(/\/$/, '');
 
   try {
-    const response = await fetch(`${WHAPI_API_URL}/messages/text`, {
+    const response = await fetch(`${base}/messages/text`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -30,14 +30,19 @@ export async function enviarWhatsAppWhapi(telefono, mensaje) {
       body: JSON.stringify({ to, body: mensaje }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       console.error('Error enviando mensaje Whapi:', data);
-      return { ok: false, error: data.error?.message || JSON.stringify(data) };
+      const errMsg = data.error?.message || data.error || JSON.stringify(data);
+      // Channel not found = token/canal desconectado o WHAPI_API_URL incorrecta
+      if (String(errMsg).toLowerCase().includes('channel not found')) {
+        console.error('[Whapi] Channel not found — revisá en el panel Whapi que el canal esté ONLINE y que WHAPI_TOKEN / WHAPI_API_URL en Vercel correspondan a ese canal.');
+      }
+      return { ok: false, error: errMsg };
     }
 
-    return { ok: true, messageId: data.id };
+    return { ok: true, messageId: data.id || data.message?.id };
   } catch (error) {
     console.error('Error en enviarWhatsAppWhapi:', error);
     return { ok: false, error: error.message };

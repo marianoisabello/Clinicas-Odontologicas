@@ -1,13 +1,35 @@
 import { supabase } from '../lib/supabase.js';
 
 export async function obtenerOCrearConversacion(telefono, pacienteId = null) {
-  const telefonoLimpio = telefono.replace('whatsapp:', '').trim();
+  let telefonoLimpio = telefono.replace('whatsapp:', '').trim();
+  if (telefonoLimpio && !telefonoLimpio.startsWith('+')) {
+    telefonoLimpio = `+${telefonoLimpio}`;
+  }
 
-  let { data: conv } = await supabase
-    .from('conversaciones_whatsapp')
-    .select('*')
-    .eq('telefono', telefonoLimpio)
-    .maybeSingle();
+  const variantes = [...new Set([
+    telefonoLimpio,
+    telefonoLimpio.startsWith('+') ? telefonoLimpio.slice(1) : telefonoLimpio,
+  ])];
+
+  let conv = null;
+  {
+    const { data: encontrados } = await supabase
+      .from('conversaciones_whatsapp')
+      .select('*')
+      .in('telefono', variantes)
+      .order('ultima_actividad', { ascending: false })
+      .limit(1);
+    conv = encontrados?.[0] || null;
+  }
+
+  // Preferir siempre formato con +
+  if (conv && conv.telefono !== telefonoLimpio) {
+    await supabase
+      .from('conversaciones_whatsapp')
+      .update({ telefono: telefonoLimpio })
+      .eq('id', conv.id);
+    conv.telefono = telefonoLimpio;
+  }
 
   if (!conv) {
     const { data: nueva } = await supabase

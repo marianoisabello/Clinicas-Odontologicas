@@ -47,13 +47,12 @@ Odontologia/
 ✅ Integración Mercado Pago (sandbox): genera link de pago por preferencia, incluido en email y WhatsApp
 ✅ Webhook MP: marca factura como cobrada al recibir pago aprobado
 ✅ Dashboard con card de funcionalidades (Google, Apps Script, MP)
-✅ Bot de menú WhatsApp: bienvenida → servicios → profesionales → agenda (IA solo en último paso)
-✅ Trigger phrase: bot solo se activa si primer mensaje = `BOT_TRIGGER_PHRASE` (var Vercel)
-✅ Soporte Whapi como provider WhatsApp (lib/whapi.js) — descartado por limitaciones de plan
+✅ Bot de menú WhatsApp: bienvenida → turnos (IA) / horarios
+✅ Trigger phrase: bot solo se activa si primer mensaje = `BOT_TRIGGER_PHRASE` (default: `Hola, quiero sacar un turno`)
+✅ Provider WhatsApp: **Whapi únicamente** (`lib/whapi.js`, webhook `/webhook/whapi`)
 ✅ Columnas `bot_estado` y `bot_contexto` agregadas a `conversaciones_whatsapp`
 ⚠️ Supabase Site URL debe estar en `https://clinicas-odontologicas.vercel.app` (no localhost)
-⚠️ WhatsApp no funciona en producción aún — pendiente conectar provider definitivo
-⚠️ Meta Business en revisión — no disponible por ahora
+⚠️ En Whapi: webhook debe apuntar a `https://clinicas-odontologicas.vercel.app/webhook/whapi`
 
 ## Supabase
 
@@ -72,9 +71,11 @@ Odontologia/
 | `SUPABASE_URL` | Backend — URL Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | Backend — service_role key (bypass RLS) |
 | `ANTHROPIC_API_KEY` | Backend — agente IA WhatsApp |
-| `TWILIO_ACCOUNT_SID` | Backend — WhatsApp vía Twilio |
-| `TWILIO_AUTH_TOKEN` | Backend |
-| `TWILIO_WHATSAPP_FROM` | Backend |
+| `WHAPI_TOKEN` | Backend — envío/recepción WhatsApp |
+| `WHAPI_API_URL` | Backend — default `https://gate.whapi.cloud` |
+| `WHAPI_WEBHOOK_TOKEN` | Backend — opcional, valida header `x-whapi-token` |
+| `WHAPI_TEST_NUMBERS` | Backend — opcional, whitelist CSV de números de prueba |
+| `BOT_TRIGGER_PHRASE` | Backend — frase exacta para activar el bot |
 | `GOOGLE_CLIENT_ID` | Backend — OAuth Google |
 | `GOOGLE_CLIENT_SECRET` | Backend |
 | `GOOGLE_REDIRECT_URI` | `https://clinicas-odontologicas.vercel.app/api/auth-google-callback` |
@@ -107,8 +108,10 @@ consultorio-backend/
 │   │   └── tools.js
 │   ├── lib/
 │   │   ├── supabase.js       # Cliente service_role (bypass RLS)
-│   │   ├── twilio.js
-│   │   └── meta-whatsapp.js
+│   │   ├── twilio.js         # (legacy, no usado)
+│   │   ├── meta-whatsapp.js  # (legacy, no usado)
+│   │   ├── ultramsg.js       # (legacy, no usado)
+│   │   └── whapi.js          # Provider WhatsApp activo
 │   ├── middleware/
 │   │   └── auth.js           # requireAuth (cualquier user) + requireAdmin
 │   ├── routes/
@@ -164,7 +167,7 @@ src/routes/
 | PUT | `/admin/turnos/:id/profesional` | requireAuth | Asigna/reasigna profesional a turno + sync Google Calendar |
 | POST | `/pagos/crear-link` | requireAuth | Crea preferencia Mercado Pago |
 | POST | `/webhook/mp` | — | Webhook MP (marca cobrada) |
-| POST | `/webhook/whatsapp` | — | Webhook Twilio/Meta |
+| POST | `/webhook/whapi` | — | Webhook Whapi (único) |
 
 ## Tablas Supabase relevantes
 
@@ -237,15 +240,14 @@ SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
 FRONTEND_URL=http://localhost:5173
 MP_ACCESS_TOKEN=TEST-...
-# + otras vars de Google, Twilio, Anthropic
+# + otras vars de Google, Whapi, Anthropic
 ```
 
 ## Próximos pasos
 
-1. **Conectar Twilio WhatsApp** — comprar número en Twilio (~$1.15/mes), configurar webhook en `/webhook/whatsapp`, agregar vars `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` en Vercel
-2. Cuando Meta apruebe el negocio: migrar a Meta Cloud API (código ya listo en `lib/meta-whatsapp.js`)
-3. MP producción: cambiar `MP_ACCESS_TOKEN` por token real cuando esté listo
-4. Job cron de recordatorios de turnos (`node-cron` no funciona en Vercel serverless — usar cron externo)
+1. **Whapi en producción** — webhook `https://clinicas-odontologicas.vercel.app/webhook/whapi`, vars `WHAPI_TOKEN` + `WHAPI_API_URL`
+2. MP producción: cambiar `MP_ACCESS_TOKEN` por token real cuando esté listo
+3. Job cron de recordatorios de turnos (`node-cron` no funciona en Vercel serverless — usar cron externo)
 
 ## Notas importantes
 

@@ -93,17 +93,42 @@ rutaTest.post('/mensaje', async (req, res) => {
 
 /**
  * GET /test/conversacion/:telefono
- * Devuelve el historial completo de una conversación
+ * Devuelve el historial de la conversación WhatsApp.
+ * No exige paciente: el bot de menú puede crear conversación sin paciente todavía.
  */
 rutaTest.get('/conversacion/:telefono', async (req, res) => {
   try {
-    const paciente = await buscarPorTelefono(req.params.telefono);
-    if (!paciente) return res.status(404).json({ error: 'Paciente no encontrado' });
+    const { supabase } = await import('../lib/supabase.js');
+    const raw = decodeURIComponent(req.params.telefono || '').replace('whatsapp:', '').trim();
+    const variantes = [...new Set([
+      raw,
+      raw.startsWith('+') ? raw.slice(1) : `+${raw}`,
+    ])].filter(Boolean);
 
-    const conv = await obtenerOCrearConversacion(req.params.telefono, paciente.id);
+    let conv = null;
+    for (const tel of variantes) {
+      const { data } = await supabase
+        .from('conversaciones_whatsapp')
+        .select('*')
+        .eq('telefono', tel)
+        .maybeSingle();
+      if (data) {
+        conv = data;
+        break;
+      }
+    }
+
+    if (!conv) {
+      return res.status(404).json({
+        error: 'Conversación no encontrada',
+        buscado: variantes,
+      });
+    }
+
+    const paciente = await buscarPorTelefono(conv.telefono);
     const mensajes = await obtenerHistorialReciente(conv.id, 100);
 
-    res.json({ conversacion: conv, mensajes, paciente });
+    res.json({ conversacion: conv, mensajes, paciente: paciente || null });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -120,19 +145,25 @@ rutaTest.post('/reset', async (req, res) => {
 
   try {
     const { supabase } = await import('../lib/supabase.js');
-    const tel = telefono.replace('whatsapp:', '').trim();
+    const raw = telefono.replace('whatsapp:', '').trim();
+    const variantes = [...new Set([
+      raw,
+      raw.startsWith('+') ? raw.slice(1) : `+${raw}`,
+    ])].filter(Boolean);
 
     const { data: convs } = await supabase
       .from('conversaciones_whatsapp')
-      .select('id')
-      .eq('telefono', tel);
+      .select('id, telefono')
+      .in('telefono', variantes);
 
     for (const c of convs || []) {
       await supabase.from('mensajes_whatsapp').delete().eq('conversacion_id', c.id);
     }
-    await supabase.from('conversaciones_whatsapp').delete().eq('telefono', tel);
+    if (convs?.length) {
+      await supabase.from('conversaciones_whatsapp').delete().in('telefono', variantes);
+    }
 
-    res.json({ ok: true, conversaciones_borradas: convs?.length || 0 });
+    res.json({ ok: true, conversaciones_borradas: convs?.length || 0, telefonos: variantes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

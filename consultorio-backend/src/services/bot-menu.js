@@ -5,7 +5,7 @@
  */
 
 import { supabase } from '../lib/supabase.js';
-import { listarTratamientos, listarProfesionales } from './pacientes.js';
+import { listarProfesionales } from './pacientes.js';
 
 const MENU_PRINCIPAL = `Hola, bienvenido/a a *Sonrisa* 😊 ¿Cómo puedo ayudarte?
 
@@ -15,7 +15,13 @@ const MENU_PRINCIPAL = `Hola, bienvenido/a a *Sonrisa* 😊 ¿Cómo puedo ayudar
 
 const MENU_OPCIONES = `¿Puedo ayudarte con algo más?\n\n1️⃣ Turnos\n2️⃣ Horarios`;
 
-const HORARIOS = `Nuestro horario de atención es:\n📅 *Lunes a viernes de 9 a 18hs*`;
+const MENU_NO_ENTENDI = `No te entendí 😅 Respondé con *1* (Turnos) o *2* (Horarios).\n\n${MENU_PRINCIPAL}`;
+
+function textoHorarios() {
+  const horario = process.env.CONSULTORIO_HORARIO
+    || 'Lunes a Viernes 9 a 20hs · Sábados 9 a 13hs';
+  return `Nuestro horario de atención es:\n📅 *${horario}*`;
+}
 
 /**
  * Normaliza el input del usuario: quita espacios, convierte emojis numéricos a dígitos
@@ -27,6 +33,18 @@ function normalizarInput(texto) {
     .replace('4️⃣', '4').replace('5️⃣', '5').replace('6️⃣', '6')
     .replace('7️⃣', '7').replace('8️⃣', '8').replace('9️⃣', '9')
     .replace('0️⃣', '0');
+}
+
+/** Compara trigger ignorando mayúsculas, tildes y puntuación menor */
+function esFraseTrigger(mensaje, triggerPhrase) {
+  const norm = (s) => normalizarInput(s)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return norm(mensaje) === norm(triggerPhrase);
 }
 
 function buildListaServicios(servicios) {
@@ -64,7 +82,7 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
 
   // El trigger phrase reinicia el bot desde cualquier estado
   const triggerPhrase = process.env.BOT_TRIGGER_PHRASE || 'Hola, quiero sacar un turno';
-  if (input.toLowerCase() === normalizarInput(triggerPhrase).toLowerCase()) {
+  if (esFraseTrigger(input, triggerPhrase)) {
     await supabase
       .from('conversaciones_whatsapp')
       .update({ bot_estado: 'menu_principal', bot_contexto: {} })
@@ -79,18 +97,19 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
     }
 
     case 'menu_principal': {
-      if (input === '1') {
+      if (input === '1' || /^(turnos?|sacar\s*turno)/i.test(input)) {
         nuevoEstado = 'agenda_ia';
         nuevoContexto = {};
-        usarIA = true;
-        respuesta = null;
-      } else if (input === '2') {
-        respuesta = `${HORARIOS}\n\n${MENU_OPCIONES}`;
+        usarIA = false;
+        // Primer mensaje de agenda sin gastar un turno de IA con "1"
+        respuesta = 'Dale, te ayudo a sacar un turno 🦷\n\n¿Qué tratamiento necesitás? (por ej. limpieza, consulta, blanqueamiento…)';
+      } else if (input === '2' || /^horarios?/i.test(input)) {
+        respuesta = `${textoHorarios()}\n\n${MENU_OPCIONES}`;
         nuevoEstado = 'menu_principal';
       } else {
-        // Mensaje no reconocido → silencio (no responder a chats personales)
-        nuevoEstado = 'inicio';
-        respuesta = null;
+        // Re-mostrar menú en vez de silenciar y resetear a inicio
+        respuesta = MENU_NO_ENTENDI;
+        nuevoEstado = 'menu_principal';
       }
       break;
     }
@@ -145,9 +164,13 @@ export async function procesarMenuBot(conversacionId, mensajeUsuario) {
     }
 
     case 'agenda_ia': {
-      if (input === '0') {
+      if (input === '0' || /^(menu|menú|volver|cancelar)$/i.test(input)) {
         respuesta = MENU_PRINCIPAL;
         nuevoEstado = 'menu_principal';
+        nuevoContexto = {};
+      } else if (/^(chau|adios|adiós|gracias|no.?gracias|listo)$/i.test(input)) {
+        respuesta = '¡Perfecto! Cuando quieras sacar un turno, escribí *Hola, quiero sacar un turno*. 👋';
+        nuevoEstado = 'inicio';
         nuevoContexto = {};
       } else {
         usarIA = true;
