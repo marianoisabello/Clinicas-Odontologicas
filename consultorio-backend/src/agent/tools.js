@@ -27,7 +27,7 @@ export const tools = [
   {
     name: 'consultar_disponibilidad',
     description:
-      'Consulta los horarios disponibles para un tratamiento en una fecha específica. Si el paciente eligió un profesional, pasá profesional_id para ver solo la agenda de ese profesional.',
+      'Consulta los horarios disponibles para un tratamiento en una fecha específica. Si el paciente eligió un profesional, pasá profesional_id para ver solo la agenda de ese profesional. La respuesta incluye texto_horarios listo para mostrar en WhatsApp (columnas); usalo tal cual, sin renumerar.',
     input_schema: {
       type: 'object',
       properties: {

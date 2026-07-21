@@ -6,6 +6,42 @@ import { crearEvento, eliminarEvento, listarEventosDelDia } from './google/calen
 const TZ = process.env.CONSULTORIO_TZ || 'America/Argentina/Buenos_Aires';
 
 /**
+ * Formatea slots en columnas compactas para WhatsApp (sin lista numerada larga).
+ * Ej:
+ *   *Mañana*
+ *   09:00 · 09:30 · 10:00 · 10:30
+ *   11:00 · 11:30 · 12:00 · 12:30
+ *   *Tarde*
+ *   14:00 · 14:30 · 15:00 · 15:30
+ */
+export function formatearSlotsWhatsApp(slots, columnas = 4) {
+  if (!slots?.length) return 'No hay horarios disponibles ese día.';
+
+  const manana = [];
+  const tarde = [];
+  for (const s of slots) {
+    const hora = s.hora || s.inicio_legible || '';
+    const h = parseInt(hora.split(':')[0], 10);
+    if (Number.isNaN(h)) continue;
+    if (h < 13) manana.push(hora);
+    else tarde.push(hora);
+  }
+
+  const filas = (arr) => {
+    const lines = [];
+    for (let i = 0; i < arr.length; i += columnas) {
+      lines.push(arr.slice(i, i + columnas).join(' · '));
+    }
+    return lines.join('\n');
+  };
+
+  const partes = [];
+  if (manana.length) partes.push(`*Mañana*\n${filas(manana)}`);
+  if (tarde.length) partes.push(`*Tarde*\n${filas(tarde)}`);
+  return partes.join('\n\n') || 'No hay horarios disponibles ese día.';
+}
+
+/**
  * Devuelve los slots disponibles en una fecha para un tratamiento dado.
  * @param {string} fecha - 'yyyy-MM-dd'
  * @param {string} tratamientoId - UUID del tratamiento
@@ -131,7 +167,14 @@ export async function obtenerDisponibilidad(fecha, tratamientoId, profesionalId 
     console.error(`⚠️  No se pudo consultar Google Calendar (${fecha}):`, gcErr.message);
   }
 
-  return { ok: true, tratamiento: tratamiento.nombre, duracion, slots };
+  return {
+    ok: true,
+    tratamiento: tratamiento.nombre,
+    duracion,
+    slots,
+    // Texto listo para WhatsApp: columnas, sin numerar (el paciente responde con la hora)
+    texto_horarios: formatearSlotsWhatsApp(slots),
+  };
 }
 
 /**
