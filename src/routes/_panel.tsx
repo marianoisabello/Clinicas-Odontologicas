@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Calendar, Users, MessageCircle, Mail, Sparkles, Settings,
-  LogOut, Smile, ArrowLeft, ShieldCheck, Banknote,
+  LogOut, Smile, ArrowLeft, ShieldCheck, Banknote, UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,7 @@ const nav = [
   { to: "/calendario", label: "Calendario", icon: Calendar },
   { to: "/pacientes", label: "Pacientes", icon: Users },
   { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { to: "/leads", label: "Leads", icon: UserPlus },
   { to: "/consultas", label: "Consultas web", icon: Mail },
   { to: "/tratamientos", label: "Tratamientos", icon: Sparkles },
   { to: "/administracion", label: "Administración", icon: Banknote },

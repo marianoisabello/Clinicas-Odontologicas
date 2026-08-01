@@ -57,6 +57,11 @@ app.use('/pagos', async (req, res, next) => {
   rutaPagos(req, res, next);
 });
 
+app.use('/leads', async (req, res, next) => {
+  const { rutaLeads } = await import('./routes/leads.js');
+  rutaLeads(req, res, next);
+});
+
 /**
  * Webhook Whapi — único canal WhatsApp.
  * Procesamos antes de responder para que Vercel no corte el trabajo.

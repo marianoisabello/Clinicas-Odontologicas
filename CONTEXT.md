@@ -51,8 +51,13 @@ Odontologia/
 ✅ Trigger phrase: bot solo se activa si primer mensaje = `BOT_TRIGGER_PHRASE` (default: `Hola, quiero sacar un turno`)
 ✅ Provider WhatsApp: **Whapi únicamente** (`lib/whapi.js`, webhook `/webhook/whapi`)
 ✅ Columnas `bot_estado` y `bot_contexto` agregadas a `conversaciones_whatsapp`
+✅ Tabla `leads` + panel `/leads` (listar, estado, convertir a paciente, reenviar WA)
+✅ Ingest leads: `POST /leads/ingest` (secret `x-leads-secret`) → guarda lead; WhatsApp catálogo solo si el teléfono normaliza a móvil WA válido
+✅ n8n workflow activo: **Sonrisa — Leads ManyChat/Google → App** (`HFGUnR7qfo6mEcfG`)
+✅ ManyChat → External Request al webhook n8n (sin Meta Ads por ahora)
 ⚠️ Supabase Site URL debe estar en `https://clinicas-odontologicas.vercel.app` (no localhost)
 ⚠️ En Whapi: webhook debe apuntar a `https://clinicas-odontologicas.vercel.app/webhook/whapi`
+⚠️ ManyChat: campos CUF `nombre`, `telefono`, `consulta` (opc.); tokens vía `{}` (no literales `{{cuf_…}}`)
 
 ## Supabase
 
@@ -84,12 +89,14 @@ Odontologia/
 | `FRONTEND_URL` | `https://clinicas-odontologicas.vercel.app` |
 | `MP_ACCESS_TOKEN` | Backend — Mercado Pago (sandbox: `TEST-...`) |
 | `CONSULTORIO_NOMBRE/DIRECCION/TELEFONO/HORARIO/TZ` | Backend — datos del consultorio |
+| `LEADS_WEBHOOK_SECRET` | Backend — header `x-leads-secret` en `POST /leads/ingest` |
 
 ## Vercel rewrites (vercel.json) — orden importa
 
 ```json
 /admin/:path*        → /api/backend
 /pagos/:path*        → /api/backend
+/leads/:path*        → /api/backend
 /webhook/:path*      → /api/backend
 /test/:path*         → /api/backend
 /auth/google/:path*  → /api/backend
@@ -119,7 +126,8 @@ consultorio-backend/
 │   │   ├── test.js
 │   │   ├── google.js         # OAuth Google + status + exportar-pacientes
 │   │   ├── admin.js          # CRUD profesionales + invitar magic link
-│   │   └── pagos.js          # Mercado Pago: crear-link + webhook
+│   │   ├── pagos.js          # Mercado Pago: crear-link + webhook
+│   │   └── leads.js          # ingest (webhook) + convert + reenviar WA
 │   └── services/
 │       ├── pacientes.js
 │       ├── turnos.js
@@ -146,6 +154,7 @@ src/routes/
 ├── _panel.tratamientos.tsx          # Catálogo + Asignaciones (genera factura + link MP)
 ├── _panel.administracion.tsx        # Cuentas a Pagar + Cuentas a Cobrar + envío Gmail/WA/MP
 ├── _panel.whatsapp.tsx              # Conversaciones WhatsApp
+├── _panel.leads.tsx                 # Leads ManyChat/Google/web → convertir a paciente
 ├── _panel.consultas.tsx             # Consultas web
 ├── _panel.configuracion.tsx         # Config consultorio + Google Calendar
 └── _panel.profesionales.tsx         # Solo admin: CRUD usuarios + invitar
@@ -169,6 +178,31 @@ src/routes/
 | POST | `/pagos/crear-link` | requireAuth | Crea preferencia Mercado Pago |
 | POST | `/webhook/mp` | — | Webhook MP (marca cobrada) |
 | POST | `/webhook/whapi` | — | Webhook Whapi (único) |
+| POST | `/leads/ingest` | `x-leads-secret` | Crea/actualiza lead; WA catálogo solo si teléfono WA válido |
+| POST | `/leads/:id/convert` | requireAuth | Convierte lead → paciente |
+| POST | `/leads/:id/reenviar-whatsapp` | requireAuth | Reenvía catálogo de servicios por Whapi |
+
+## Leads multi-canal (ManyChat / Google / n8n)
+
+**Flujo:** ManyChat (o Google Form) → n8n webhook → `POST /leads/ingest` → Supabase `leads` + mail a `marianoisabello@pampai.com` → (opcional) WhatsApp catálogo vía Whapi.
+
+| Pieza | Detalle |
+|-------|---------|
+| n8n instance | `https://pampaiargentina.app.n8n.cloud` |
+| Workflow | `Sonrisa — Leads ManyChat/Google → App` · id `HFGUnR7qfo6mEcfG` · **activo** |
+| Webhook prod | `POST https://pampaiargentina.app.n8n.cloud/webhook/sonrisa-leads` |
+| Credencial header | `Sonrisa Leads Webhook Secret` (`httpHeaderAuth`, header `x-leads-secret`) |
+| Body mínimo ManyChat | `{ "nombre", "telefono", "consulta?", "fuente":"manychat", "external_id" }` |
+| Canal | Fijo `manychat` cuando `fuente=manychat`; `email`/`campania` opcionales |
+| Teléfono | Se **guarda siempre**; WhatsApp/chatbox solo si normaliza a móvil usable (≥10 dígitos AR). Si no → lead sin WA (`whatsapp.skipped`) |
+| Migración | `supabase/migrations/20260721000000_leads.sql` |
+| Panel | `/leads` — estados: `nuevo`, `contactado`, `agendado`, `descartado`, `paciente` |
+
+**ManyChat CUF sugeridos:** `nombre`, `telefono`, `consulta` (opcional). Insertar variables con `{}` (no tipeados a mano). External Request **después** de guardar respuestas.
+
+**Google (pendiente de cablear):** Form → Apps Script `onFormSubmit` al mismo webhook, o Sheet + trigger n8n; `fuente: "google"`.
+
+**No usar Meta Ads** hasta autorización del negocio.
 
 ## Tablas Supabase relevantes
 
@@ -184,9 +218,11 @@ src/routes/
 | `configuracion` | Datos del consultorio (nombre, dirección, teléfono, email) |
 | `conversaciones_whatsapp` | Conversaciones WhatsApp |
 | `google_calendar_credentials` | Tokens OAuth Google (encriptados) |
+| `leads` | Capturas marketing (ManyChat, Google, web, etc.) → convertir a paciente |
 
 **SQL pendientes de correr (si no se hicieron):**
 - `supabase_paciente_tratamientos.sql` — tabla `paciente_tratamientos` con RLS
+- `supabase/migrations/20260721000000_leads.sql` — si la tabla `leads` aún no existe en el proyecto
 
 ## Roles del sistema
 
@@ -246,9 +282,11 @@ MP_ACCESS_TOKEN=TEST-...
 
 ## Próximos pasos
 
-1. **Whapi en producción** — webhook `https://clinicas-odontologicas.vercel.app/webhook/whapi`, vars `WHAPI_TOKEN` + `WHAPI_API_URL`
-2. MP producción: cambiar `MP_ACCESS_TOKEN` por token real cuando esté listo
-3. Job cron de recordatorios de turnos (`node-cron` no funciona en Vercel serverless — usar cron externo)
+1. Terminar External Request ManyChat en flujo live (no solo Test Request) con teléfono real → WA catálogo
+2. Cablear Google Form / Sheet al webhook n8n (`fuente: google`)
+3. MP producción: cambiar `MP_ACCESS_TOKEN` por token real cuando esté listo
+4. Job cron de recordatorios de turnos (`node-cron` no funciona en Vercel serverless — usar cron externo)
+5. Meta Ads: recién cuando el negocio autorice (hoy todo vía ManyChat)
 
 ## Notas importantes
 
@@ -258,3 +296,5 @@ MP_ACCESS_TOKEN=TEST-...
 - TanStack Router: `_panel` es layout, sin prefijo en la URL (la ruta es `/dashboard` no `/panel/dashboard`).
 - Supabase proyecto único: `dfnlcmuobvphevyshzqm`. Ignorar proyectos viejos.
 - Datos de salud: Ley 26.529 y Ley 25.326. Nunca commitear `.env`.
+- No commitear `consultorio-backend/.leads_secret.tmp` (está en `.gitignore`).
+- WhatsApp activo: solo Whapi. Legacy Twilio/Meta/UltraMsg en `lib/` no se usan.

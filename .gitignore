@@ -45,3 +45,7 @@ coverage/
 *.pem
 .vercel
 .env.vercel.tmp
+
+# Leads webhook secret local
+consultorio-backend/.leads_secret.tmp
+*.leads_secret.tmp

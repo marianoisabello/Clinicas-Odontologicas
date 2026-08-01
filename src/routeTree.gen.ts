@@ -9,36 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ServiciosRouteImport } from './routes/servicios'
-import { Route as NosotrosRouteImport } from './routes/nosotros'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ContactoRouteImport } from './routes/contacto'
-import { Route as PanelRouteImport } from './routes/_panel'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PanelWhatsappRouteImport } from './routes/_panel.whatsapp'
-import { Route as PanelTratamientosRouteImport } from './routes/_panel.tratamientos'
-import { Route as PanelProfesionalesRouteImport } from './routes/_panel.profesionales'
-import { Route as PanelPacientesRouteImport } from './routes/_panel.pacientes'
-import { Route as PanelDashboardRouteImport } from './routes/_panel.dashboard'
-import { Route as PanelConsultasRouteImport } from './routes/_panel.consultas'
-import { Route as PanelConfiguracionRouteImport } from './routes/_panel.configuracion'
-import { Route as PanelCalendarioRouteImport } from './routes/_panel.calendario'
+import { Route as PanelRouteImport } from './routes/_panel'
+import { Route as ContactoRouteImport } from './routes/contacto'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as NosotrosRouteImport } from './routes/nosotros'
+import { Route as ServiciosRouteImport } from './routes/servicios'
 import { Route as PanelAdministracionRouteImport } from './routes/_panel.administracion'
+import { Route as PanelCalendarioRouteImport } from './routes/_panel.calendario'
+import { Route as PanelConfiguracionRouteImport } from './routes/_panel.configuracion'
+import { Route as PanelConsultasRouteImport } from './routes/_panel.consultas'
+import { Route as PanelDashboardRouteImport } from './routes/_panel.dashboard'
+import { Route as PanelLeadsRouteImport } from './routes/_panel.leads'
+import { Route as PanelPacientesRouteImport } from './routes/_panel.pacientes'
+import { Route as PanelProfesionalesRouteImport } from './routes/_panel.profesionales'
+import { Route as PanelTratamientosRouteImport } from './routes/_panel.tratamientos'
+import { Route as PanelWhatsappRouteImport } from './routes/_panel.whatsapp'
 import { Route as PanelPacientesIdRouteImport } from './routes/_panel.pacientes.$id'
 
-const ServiciosRoute = ServiciosRouteImport.update({
-  id: '/servicios',
-  path: '/servicios',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NosotrosRoute = NosotrosRouteImport.update({
-  id: '/nosotros',
-  path: '/nosotros',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const PanelRoute = PanelRouteImport.update({
+  id: '/_panel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactoRoute = ContactoRouteImport.update({
@@ -46,48 +41,24 @@ const ContactoRoute = ContactoRouteImport.update({
   path: '/contacto',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PanelRoute = PanelRouteImport.update({
-  id: '/_panel',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const NosotrosRoute = NosotrosRouteImport.update({
+  id: '/nosotros',
+  path: '/nosotros',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PanelWhatsappRoute = PanelWhatsappRouteImport.update({
-  id: '/whatsapp',
-  path: '/whatsapp',
-  getParentRoute: () => PanelRoute,
+const ServiciosRoute = ServiciosRouteImport.update({
+  id: '/servicios',
+  path: '/servicios',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const PanelTratamientosRoute = PanelTratamientosRouteImport.update({
-  id: '/tratamientos',
-  path: '/tratamientos',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelProfesionalesRoute = PanelProfesionalesRouteImport.update({
-  id: '/profesionales',
-  path: '/profesionales',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelPacientesRoute = PanelPacientesRouteImport.update({
-  id: '/pacientes',
-  path: '/pacientes',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelDashboardRoute = PanelDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelConsultasRoute = PanelConsultasRouteImport.update({
-  id: '/consultas',
-  path: '/consultas',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelConfiguracionRoute = PanelConfiguracionRouteImport.update({
-  id: '/configuracion',
-  path: '/configuracion',
+const PanelAdministracionRoute = PanelAdministracionRouteImport.update({
+  id: '/administracion',
+  path: '/administracion',
   getParentRoute: () => PanelRoute,
 } as any)
 const PanelCalendarioRoute = PanelCalendarioRouteImport.update({
@@ -95,9 +66,44 @@ const PanelCalendarioRoute = PanelCalendarioRouteImport.update({
   path: '/calendario',
   getParentRoute: () => PanelRoute,
 } as any)
-const PanelAdministracionRoute = PanelAdministracionRouteImport.update({
-  id: '/administracion',
-  path: '/administracion',
+const PanelConfiguracionRoute = PanelConfiguracionRouteImport.update({
+  id: '/configuracion',
+  path: '/configuracion',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelConsultasRoute = PanelConsultasRouteImport.update({
+  id: '/consultas',
+  path: '/consultas',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelDashboardRoute = PanelDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelLeadsRoute = PanelLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelPacientesRoute = PanelPacientesRouteImport.update({
+  id: '/pacientes',
+  path: '/pacientes',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelProfesionalesRoute = PanelProfesionalesRouteImport.update({
+  id: '/profesionales',
+  path: '/profesionales',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelTratamientosRoute = PanelTratamientosRouteImport.update({
+  id: '/tratamientos',
+  path: '/tratamientos',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelWhatsappRoute = PanelWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
   getParentRoute: () => PanelRoute,
 } as any)
 const PanelPacientesIdRoute = PanelPacientesIdRouteImport.update({
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/configuracion': typeof PanelConfiguracionRoute
   '/consultas': typeof PanelConsultasRoute
   '/dashboard': typeof PanelDashboardRoute
+  '/leads': typeof PanelLeadsRoute
   '/pacientes': typeof PanelPacientesRouteWithChildren
   '/profesionales': typeof PanelProfesionalesRoute
   '/tratamientos': typeof PanelTratamientosRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/configuracion': typeof PanelConfiguracionRoute
   '/consultas': typeof PanelConsultasRoute
   '/dashboard': typeof PanelDashboardRoute
+  '/leads': typeof PanelLeadsRoute
   '/pacientes': typeof PanelPacientesRouteWithChildren
   '/profesionales': typeof PanelProfesionalesRoute
   '/tratamientos': typeof PanelTratamientosRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/_panel/configuracion': typeof PanelConfiguracionRoute
   '/_panel/consultas': typeof PanelConsultasRoute
   '/_panel/dashboard': typeof PanelDashboardRoute
+  '/_panel/leads': typeof PanelLeadsRoute
   '/_panel/pacientes': typeof PanelPacientesRouteWithChildren
   '/_panel/profesionales': typeof PanelProfesionalesRoute
   '/_panel/tratamientos': typeof PanelTratamientosRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/configuracion'
     | '/consultas'
     | '/dashboard'
+    | '/leads'
     | '/pacientes'
     | '/profesionales'
     | '/tratamientos'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/configuracion'
     | '/consultas'
     | '/dashboard'
+    | '/leads'
     | '/pacientes'
     | '/profesionales'
     | '/tratamientos'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/_panel/configuracion'
     | '/_panel/consultas'
     | '/_panel/dashboard'
+    | '/_panel/leads'
     | '/_panel/pacientes'
     | '/_panel/profesionales'
     | '/_panel/tratamientos'
@@ -225,32 +237,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/servicios': {
-      id: '/servicios'
-      path: '/servicios'
-      fullPath: '/servicios'
-      preLoaderRoute: typeof ServiciosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nosotros': {
-      id: '/nosotros'
-      path: '/nosotros'
-      fullPath: '/nosotros'
-      preLoaderRoute: typeof NosotrosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contacto': {
-      id: '/contacto'
-      path: '/contacto'
-      fullPath: '/contacto'
-      preLoaderRoute: typeof ContactoRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_panel': {
@@ -260,60 +251,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/contacto': {
+      id: '/contacto'
+      path: '/contacto'
+      fullPath: '/contacto'
+      preLoaderRoute: typeof ContactoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_panel/whatsapp': {
-      id: '/_panel/whatsapp'
-      path: '/whatsapp'
-      fullPath: '/whatsapp'
-      preLoaderRoute: typeof PanelWhatsappRouteImport
-      parentRoute: typeof PanelRoute
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_panel/tratamientos': {
-      id: '/_panel/tratamientos'
-      path: '/tratamientos'
-      fullPath: '/tratamientos'
-      preLoaderRoute: typeof PanelTratamientosRouteImport
-      parentRoute: typeof PanelRoute
+    '/nosotros': {
+      id: '/nosotros'
+      path: '/nosotros'
+      fullPath: '/nosotros'
+      preLoaderRoute: typeof NosotrosRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_panel/profesionales': {
-      id: '/_panel/profesionales'
-      path: '/profesionales'
-      fullPath: '/profesionales'
-      preLoaderRoute: typeof PanelProfesionalesRouteImport
-      parentRoute: typeof PanelRoute
+    '/servicios': {
+      id: '/servicios'
+      path: '/servicios'
+      fullPath: '/servicios'
+      preLoaderRoute: typeof ServiciosRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_panel/pacientes': {
-      id: '/_panel/pacientes'
-      path: '/pacientes'
-      fullPath: '/pacientes'
-      preLoaderRoute: typeof PanelPacientesRouteImport
-      parentRoute: typeof PanelRoute
-    }
-    '/_panel/dashboard': {
-      id: '/_panel/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof PanelDashboardRouteImport
-      parentRoute: typeof PanelRoute
-    }
-    '/_panel/consultas': {
-      id: '/_panel/consultas'
-      path: '/consultas'
-      fullPath: '/consultas'
-      preLoaderRoute: typeof PanelConsultasRouteImport
-      parentRoute: typeof PanelRoute
-    }
-    '/_panel/configuracion': {
-      id: '/_panel/configuracion'
-      path: '/configuracion'
-      fullPath: '/configuracion'
-      preLoaderRoute: typeof PanelConfiguracionRouteImport
+    '/_panel/administracion': {
+      id: '/_panel/administracion'
+      path: '/administracion'
+      fullPath: '/administracion'
+      preLoaderRoute: typeof PanelAdministracionRouteImport
       parentRoute: typeof PanelRoute
     }
     '/_panel/calendario': {
@@ -323,11 +293,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelCalendarioRouteImport
       parentRoute: typeof PanelRoute
     }
-    '/_panel/administracion': {
-      id: '/_panel/administracion'
-      path: '/administracion'
-      fullPath: '/administracion'
-      preLoaderRoute: typeof PanelAdministracionRouteImport
+    '/_panel/configuracion': {
+      id: '/_panel/configuracion'
+      path: '/configuracion'
+      fullPath: '/configuracion'
+      preLoaderRoute: typeof PanelConfiguracionRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/consultas': {
+      id: '/_panel/consultas'
+      path: '/consultas'
+      fullPath: '/consultas'
+      preLoaderRoute: typeof PanelConsultasRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/dashboard': {
+      id: '/_panel/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof PanelDashboardRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/leads': {
+      id: '/_panel/leads'
+      path: '/leads'
+      fullPath: '/leads'
+      preLoaderRoute: typeof PanelLeadsRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/pacientes': {
+      id: '/_panel/pacientes'
+      path: '/pacientes'
+      fullPath: '/pacientes'
+      preLoaderRoute: typeof PanelPacientesRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/profesionales': {
+      id: '/_panel/profesionales'
+      path: '/profesionales'
+      fullPath: '/profesionales'
+      preLoaderRoute: typeof PanelProfesionalesRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/tratamientos': {
+      id: '/_panel/tratamientos'
+      path: '/tratamientos'
+      fullPath: '/tratamientos'
+      preLoaderRoute: typeof PanelTratamientosRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/whatsapp': {
+      id: '/_panel/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof PanelWhatsappRouteImport
       parentRoute: typeof PanelRoute
     }
     '/_panel/pacientes/$id': {
@@ -358,6 +377,7 @@ interface PanelRouteChildren {
   PanelConfiguracionRoute: typeof PanelConfiguracionRoute
   PanelConsultasRoute: typeof PanelConsultasRoute
   PanelDashboardRoute: typeof PanelDashboardRoute
+  PanelLeadsRoute: typeof PanelLeadsRoute
   PanelPacientesRoute: typeof PanelPacientesRouteWithChildren
   PanelProfesionalesRoute: typeof PanelProfesionalesRoute
   PanelTratamientosRoute: typeof PanelTratamientosRoute
@@ -370,6 +390,7 @@ const PanelRouteChildren: PanelRouteChildren = {
   PanelConfiguracionRoute: PanelConfiguracionRoute,
   PanelConsultasRoute: PanelConsultasRoute,
   PanelDashboardRoute: PanelDashboardRoute,
+  PanelLeadsRoute: PanelLeadsRoute,
   PanelPacientesRoute: PanelPacientesRouteWithChildren,
   PanelProfesionalesRoute: PanelProfesionalesRoute,
   PanelTratamientosRoute: PanelTratamientosRoute,
